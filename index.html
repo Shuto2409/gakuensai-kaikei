@@ -263,6 +263,39 @@
     border:none;background:none;color:var(--text-soft);font-size:13px;cursor:pointer;
     padding:6px 0;text-decoration:underline;
   }
+
+  /* cart */
+  .cart-row{
+    display:flex;align-items:center;gap:8px;
+    padding:10px 4px;border-bottom:1px solid #eef0f2;font-size:14.5px;
+  }
+  .cart-row:last-child{border-bottom:none;}
+  .cr-name{flex:1;}
+  .cr-qty{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .qty-btn{
+    width:28px;height:28px;border-radius:6px;border:1px solid var(--border);
+    background:#fafbfc;font-size:16px;line-height:1;cursor:pointer;color:var(--text);
+  }
+  .qty-num{min-width:18px;text-align:center;font-variant-numeric:tabular-nums;font-weight:600;}
+  .cr-amt{width:76px;text-align:right;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums;flex-shrink:0;}
+
+  .receipt-banner{
+    background:var(--green-soft);color:var(--green);border-radius:8px;
+    padding:10px 12px;font-size:13px;margin-bottom:14px;
+  }
+
+  /* checkout */
+  .change-box{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding:16px;border-radius:10px;margin:14px 0 18px;
+    background:#f1f2f4;border:1.5px solid var(--border);
+  }
+  .change-box .l{font-size:14px;color:var(--text-soft);}
+  .change-box .v{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text-soft);}
+  .change-box.ok{background:var(--green-soft);border-color:#bfe8cf;}
+  .change-box.ok .v{color:var(--green);}
+  .change-box.short{background:#fdecec;border-color:#f3c6c6;}
+  .change-box.short .v{color:var(--red);font-size:18px;}
 </style>
 </head>
 <body>
@@ -367,6 +400,11 @@ let sales = [];
 let menu = [];
 let activeDayId = null;
 let currentScreen = "sales";
+
+/* register/checkout state (per-device, not persisted) */
+let cart = [];          // { key, name, unitPrice, qty, isCustom, memo }
+let checkoutMode = false;
+let lastReceipt = null; // { total, received, change }
 
 const fmt = new Intl.NumberFormat("ja-JP");
 const yen = n => "¥" + fmt.format(Math.round(n || 0));
@@ -640,7 +678,7 @@ function renderCurrentScreen(){
    ============================================================ */
 function renderMenuPicker(){
   if(menu.length === 0){
-    return `<div class="menu-empty-hint">管理画面の「メニュー管理」で商品を登録すると、ここからワンタップで記録できます</div>`;
+    return `<div class="menu-empty-hint">管理画面の「メニュー管理」で商品を登録すると、ここからワンタップでカートに追加できます</div>`;
   }
   return `<div class="menu-grid">
     ${menu.map(m => `
@@ -650,6 +688,41 @@ function renderMenuPicker(){
       </button>
     `).join("")}
   </div>`;
+}
+
+function cartTotal(){
+  return cart.reduce((s,l) => s + l.unitPrice * l.qty, 0);
+}
+function cartCount(){
+  return cart.reduce((s,l) => s + l.qty, 0);
+}
+
+function addMenuItemToCart(item){
+  const existing = cart.find(l => l.key === item.id && !l.isCustom);
+  if(existing){ existing.qty += 1; }
+  else { cart.push({ key: item.id, name: item.name, unitPrice: item.price, qty: 1, isCustom: false }); }
+  lastReceipt = null;
+  renderCurrentScreen();
+}
+function addCustomToCart(amount, memo){
+  cart.push({ key: uid(), name: memo || "その他", unitPrice: amount, qty: 1, isCustom: true });
+  lastReceipt = null;
+  renderCurrentScreen();
+}
+function changeCartQty(key, delta){
+  const line = cart.find(l => l.key === key);
+  if(!line) return;
+  line.qty += delta;
+  if(line.qty <= 0){ cart = cart.filter(l => l.key !== key); }
+  renderCurrentScreen();
+}
+function removeCartLine(key){
+  cart = cart.filter(l => l.key !== key);
+  renderCurrentScreen();
+}
+function clearCart(){
+  cart = [];
+  checkoutMode = false;
 }
 
 function renderSalesScreen(){
@@ -681,16 +754,28 @@ function renderSalesScreen(){
     return;
   }
 
+  if(checkoutMode){
+    renderCheckoutPanel(root, day);
+    return;
+  }
+
   const total = daySalesTotal(day.id);
   const list = salesForDay(day.id);
+  const ctotal = cartTotal();
 
   root.innerHTML = `
     <div class="panel">
       <div class="status-banner open">営業中（${day.date}）</div>
 
+      ${lastReceipt ? `
+        <div class="receipt-banner">
+          直前の会計：合計 ${yen(lastReceipt.total)} ／ お預かり ${yen(lastReceipt.received)} ／ おつり <b>${yen(lastReceipt.change)}</b>
+        </div>
+      ` : ""}
+
       ${renderMenuPicker()}
 
-      <button type="button" class="custom-toggle" id="customToggle">＋ メニューにない金額を直接入力する</button>
+      <button type="button" class="custom-toggle" id="customToggle">＋ メニューにない金額をカートに追加する</button>
       <div class="custom-box" id="customBox" style="display:none;">
         <input type="number" inputmode="numeric" class="sale-amount-input" id="saleAmount" placeholder="0" autocomplete="off">
         <div class="quick-amounts">
@@ -703,12 +788,34 @@ function renderSalesScreen(){
         <div class="field" id="memoField" style="display:none;">
           <input type="text" id="saleMemo" placeholder="例）割引販売">
         </div>
-        <button class="big-btn primary" id="addSaleBtn">この金額を記録する</button>
+        <button class="big-btn outline" id="addCustomBtn">カートに追加</button>
       </div>
 
-      <div class="today-total" style="margin-top:18px;">
+      <h3 style="margin-top:20px;">カート${cart.length>0 ? `（${cartCount()}点）` : ""}</h3>
+      <div>
+        ${cart.length===0 ? '<div class="empty">まだ何も選んでいません</div>' : cart.map(l=>`
+          <div class="cart-row">
+            <span class="cr-name">${escapeHtml(l.name)}</span>
+            <span class="cr-qty">
+              <button type="button" class="qty-btn" data-key="${l.key}" data-d="-1">－</button>
+              <span class="qty-num">${l.qty}</span>
+              <button type="button" class="qty-btn" data-key="${l.key}" data-d="1">＋</button>
+            </span>
+            <span class="cr-amt">${yen(l.unitPrice * l.qty)}</span>
+            <button class="del" data-remove="${l.key}">✕</button>
+          </div>
+        `).join("")}
+      </div>
+
+      <div class="today-total" style="margin-top:14px;">
+        <span class="l">カート合計</span>
+        <span class="v">${yen(ctotal)}</span>
+      </div>
+      <button class="big-btn primary" id="checkoutBtn" ${cart.length===0 ? "disabled" : ""}>会計する</button>
+
+      <div class="today-total" style="margin-top:18px;background:#f1f2f4;">
         <span class="l">本日の売上合計</span>
-        <span class="v">${yen(total)}</span>
+        <span class="v" style="color:var(--text);">${yen(total)}</span>
       </div>
 
       <h3>直近の記録</h3>
@@ -728,8 +835,7 @@ function renderSalesScreen(){
   root.querySelectorAll(".menu-item-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       const item = menu.find(m=>m.id===btn.dataset.id);
-      if(!item) return;
-      addSaleOp({ dayId: day.id, time: nowTime(), amount: item.price, item: item.name, memo: "", status: "pending" });
+      if(item) addMenuItemToCart(item);
     });
   });
 
@@ -757,21 +863,143 @@ function renderSalesScreen(){
       f.style.display = show ? "block" : "none";
       if(show) document.getElementById("saleMemo").focus();
     });
-    document.getElementById("addSaleBtn").addEventListener("click", async ()=>{
+    document.getElementById("addCustomBtn").addEventListener("click", ()=>{
       const amount = parseFloat(amountInput.value);
       if(!amount || amount<=0){ amountInput.focus(); return; }
       const memo = (document.getElementById("saleMemo")?.value||"").trim();
-      await addSaleOp({ dayId: day.id, time: nowTime(), amount, item: null, memo, status: "done" });
-      const box = document.getElementById("customBox");
-      const a = document.getElementById("saleAmount");
-      if(box) box.style.display = "block";
-      if(a){ a.value=""; a.focus(); }
+      addCustomToCart(amount, memo);
     });
   }
 
-  root.querySelectorAll(".del").forEach(b=>{
+  root.querySelectorAll(".qty-btn").forEach(b=>{
+    b.addEventListener("click", ()=> changeCartQty(b.dataset.key, parseInt(b.dataset.d,10)));
+  });
+  root.querySelectorAll("[data-remove]").forEach(b=>{
+    b.addEventListener("click", ()=> removeCartLine(b.dataset.remove));
+  });
+
+  const checkoutBtn = document.getElementById("checkoutBtn");
+  if(checkoutBtn){
+    checkoutBtn.addEventListener("click", ()=>{
+      if(cart.length===0) return;
+      checkoutMode = true;
+      renderCurrentScreen();
+    });
+  }
+
+  root.querySelectorAll(".del[data-id]").forEach(b=>{
     b.addEventListener("click", ()=> deleteSaleOp(b.dataset.id));
   });
+}
+
+function renderCheckoutPanel(root, day){
+  const total = cartTotal();
+
+  root.innerHTML = `
+    <div class="panel">
+      <h3>会計内容</h3>
+      <div style="margin-bottom:10px;">
+        ${cart.map(l=>`
+          <div class="breakdown-row">
+            <span class="bname">${escapeHtml(l.name)}<span class="bcount">× ${l.qty}</span></span>
+            <span class="bamt">${yen(l.unitPrice * l.qty)}</span>
+          </div>
+        `).join("")}
+      </div>
+
+      <div class="today-total">
+        <span class="l">合計金額</span>
+        <span class="v">${yen(total)}</span>
+      </div>
+
+      <div class="field" style="margin-top:16px;">
+        <label for="receivedInput">お預かりした金額</label>
+        <input type="number" inputmode="numeric" class="sale-amount-input" id="receivedInput" placeholder="0" autocomplete="off">
+      </div>
+      <div class="quick-amounts" style="grid-template-columns:repeat(3,1fr);">
+        <button type="button" id="exactBtn">ちょうど（${yen(total)}）</button>
+        <button type="button" data-amt="1000">+1000</button>
+        <button type="button" data-amt="5000">+5000</button>
+        <button type="button" data-amt="10000">+10000</button>
+        <button type="button" data-amt="100">+100</button>
+        <button type="button" data-amt="500">+500</button>
+      </div>
+
+      <div class="change-box" id="changeBox">
+        <span class="l">おつり</span>
+        <span class="v" id="changeValue">¥0</span>
+      </div>
+
+      <button class="big-btn primary" id="confirmCheckoutBtn" disabled>会計を確定する</button>
+      <button class="big-btn outline" id="cancelCheckoutBtn" style="margin-top:10px;">カートに戻る</button>
+    </div>
+  `;
+
+  const receivedInput = document.getElementById("receivedInput");
+  const changeBox = document.getElementById("changeBox");
+  const changeValue = document.getElementById("changeValue");
+  const confirmBtn = document.getElementById("confirmCheckoutBtn");
+
+  function updateChange(){
+    const received = parseFloat(receivedInput.value) || 0;
+    const change = received - total;
+    changeValue.textContent = yen(Math.abs(change));
+    if(received === 0){
+      changeBox.className = "change-box";
+      changeValue.textContent = "¥0";
+      confirmBtn.disabled = true;
+    } else if(change < 0){
+      changeBox.className = "change-box short";
+      changeValue.textContent = "不足 " + yen(Math.abs(change));
+      confirmBtn.disabled = true;
+    } else {
+      changeBox.className = "change-box ok";
+      confirmBtn.disabled = false;
+    }
+  }
+
+  receivedInput.addEventListener("input", updateChange);
+  document.getElementById("exactBtn").addEventListener("click", ()=>{
+    receivedInput.value = total;
+    updateChange();
+  });
+  root.querySelectorAll(".quick-amounts button[data-amt]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const cur = parseFloat(receivedInput.value) || 0;
+      receivedInput.value = cur + parseFloat(b.dataset.amt);
+      updateChange();
+    });
+  });
+
+  document.getElementById("cancelCheckoutBtn").addEventListener("click", ()=>{
+    checkoutMode = false;
+    renderCurrentScreen();
+  });
+
+  confirmBtn.addEventListener("click", async ()=>{
+    const received = parseFloat(receivedInput.value) || 0;
+    if(received < total) return;
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "登録中…";
+
+    const time = nowTime();
+    for(const l of cart){
+      for(let i=0; i<l.qty; i++){
+        await addSaleOp({
+          dayId: day.id, time, amount: l.unitPrice,
+          item: l.isCustom ? null : l.name,
+          memo: l.isCustom ? l.name : "",
+          status: l.isCustom ? "done" : "pending"
+        });
+      }
+    }
+
+    lastReceipt = { total, received, change: received - total };
+    clearCart();
+    renderCurrentScreen();
+  });
+
+  receivedInput.focus();
 }
 
 /* ============================================================
