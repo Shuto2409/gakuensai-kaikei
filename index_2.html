@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>模擬店 売上管理</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#f4f5f7;
+    --panel:#ffffff;
+    --border:#e0e3e8;
+    --text:#1f2328;
+    --text-soft:#6b7280;
+    --blue:#2563eb;
+    --blue-soft:#eaf1ff;
+    --green:#1a7f4b;
+    --green-soft:#e8f8ee;
+    --amber:#b7791f;
+    --amber-soft:#fff4e0;
+    --red:#c53030;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    font-size:16px;
+    line-height:1.6;
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:16px 16px 100px;}
+
+  h1{font-size:18px;margin:0 0 2px;}
+  .subtitle{color:var(--text-soft);font-size:12.5px;margin-bottom:14px;}
+
+  .sync-banner{
+    display:flex;align-items:center;gap:8px;
+    padding:9px 12px;border-radius:8px;font-size:12.5px;margin-bottom:12px;
+  }
+  .sync-banner.online{background:var(--green-soft);color:var(--green);}
+  .sync-banner.offline{background:var(--amber-soft);color:var(--amber);}
+  .sync-banner.loading{background:#f1f2f4;color:var(--text-soft);}
+  .sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .sync-banner.online .sync-dot{background:var(--green);}
+  .sync-banner.offline .sync-dot{background:var(--amber);}
+  .sync-banner.loading .sync-dot{background:var(--text-soft);}
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:18px;
+    margin-bottom:16px;
+  }
+  .panel h2{font-size:15px;margin:0 0 12px;color:var(--text-soft);font-weight:600;}
+  .panel h3{font-size:13.5px;margin:0 0 10px;color:var(--text-soft);font-weight:600;}
+
+  .grand-total{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:14px;
+    text-align:center;
+  }
+  .grand-total .label{font-size:12.5px;color:var(--text-soft);margin-bottom:4px;}
+  .grand-total .value{font-size:26px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums;}
+
+  .bottom-nav{
+    position:fixed;left:0;right:0;bottom:0;
+    background:#fff;border-top:1px solid var(--border);
+    display:flex;
+    padding-bottom:env(safe-area-inset-bottom, 0);
+    z-index:50;
+  }
+  .nav-btn{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:10px 0 8px;border:none;background:none;cursor:pointer;color:var(--text-soft);
+  }
+  .nav-btn .ic{font-size:20px;}
+  .nav-btn .lb{font-size:11.5px;font-weight:600;}
+  .nav-btn.active{color:var(--blue);}
+  .nav-btn .badge{
+    position:absolute;transform:translate(14px,-14px);
+    background:var(--red);color:#fff;font-size:10px;font-weight:700;
+    border-radius:9px;min-width:16px;height:16px;padding:0 4px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .nav-btn-wrap{position:relative;flex:1;display:flex;}
+
+  .screen{display:none;}
+  .screen.active{display:block;}
+
+  .day-tabs{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;}
+  .day-tab{
+    flex-shrink:0;
+    padding:10px 16px;border:1px solid var(--border);border-radius:20px;
+    background:#fff;cursor:pointer;font-size:14px;color:var(--text-soft);
+    display:flex;align-items:center;gap:6px;
+  }
+  .day-tab.active{border-color:var(--blue);color:var(--blue);background:var(--blue-soft);font-weight:700;}
+  .day-tab .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .dot.not_opened{background:#c1c6cd;}
+  .dot.open{background:var(--green);}
+  .dot.closed{background:var(--text-soft);}
+  .add-day-btn{
+    flex-shrink:0;
+    padding:10px 14px;border:1px dashed var(--border);border-radius:20px;
+    background:none;cursor:pointer;color:var(--text-soft);font-size:14px;
+  }
+
+  .status-banner{
+    padding:10px 14px;border-radius:var(--radius);margin-bottom:14px;font-size:14px;text-align:center;
+  }
+  .status-banner.open{background:var(--green-soft);color:var(--green);font-weight:600;}
+  .status-banner.closed{background:#f1f2f4;border:1px solid var(--border);color:var(--text-soft);}
+  .status-banner.not_opened{background:var(--amber-soft);color:var(--amber);}
+
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:13px;color:var(--text-soft);margin-bottom:6px;}
+  .field input{
+    width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;
+    font-size:18px;background:#fff;color:var(--text);
+  }
+  .field input:focus{outline:2px solid var(--blue);outline-offset:0;border-color:var(--blue);}
+
+  .big-btn{
+    width:100%;
+    padding:16px 0;
+    border:none;border-radius:10px;
+    font-size:17px;font-weight:700;
+    cursor:pointer;
+  }
+  .big-btn.primary{background:var(--blue);color:#fff;}
+  .big-btn.primary:hover{background:#1d4fd1;}
+  .big-btn.outline{background:#fff;border:1.5px solid var(--border);color:var(--text);}
+  .big-btn.outline:hover{border-color:var(--text-soft);}
+  .big-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+  .menu-grid{
+    display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:8px;
+  }
+  .menu-item-btn{
+    display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+    padding:14px 14px;border:1.5px solid var(--border);border-radius:10px;
+    background:#fafbfc;cursor:pointer;text-align:left;
+  }
+  .menu-item-btn:active{background:var(--blue-soft);border-color:var(--blue);transform:scale(0.98);}
+  .menu-item-btn .mi-name{font-size:15px;font-weight:700;}
+  .menu-item-btn .mi-price{font-size:14px;color:var(--green);font-weight:700;font-variant-numeric:tabular-nums;}
+  .menu-empty-hint{
+    font-size:13px;color:var(--text-soft);padding:14px;border:1px dashed var(--border);
+    border-radius:10px;text-align:center;margin-bottom:8px;
+  }
+
+  .custom-toggle{
+    background:none;border:none;color:var(--blue);font-size:13.5px;cursor:pointer;
+    padding:8px 0;margin:4px 0 10px;text-align:left;width:100%;
+  }
+  .custom-box{border-top:1px solid var(--border);padding-top:14px;margin-top:4px;}
+
+  .sale-amount-input{
+    width:100%;
+    padding:18px 16px;
+    font-size:28px;
+    font-weight:700;
+    text-align:center;
+    border:1.5px solid var(--border);
+    border-radius:10px;
+    margin-bottom:10px;
+    font-variant-numeric:tabular-nums;
+  }
+  .sale-amount-input:focus{outline:2px solid var(--blue);border-color:var(--blue);}
+
+  .quick-amounts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+  .quick-amounts button{
+    padding:10px 0;border:1px solid var(--border);border-radius:8px;background:#fafbfc;
+    font-size:14px;color:var(--text);cursor:pointer;font-variant-numeric:tabular-nums;
+  }
+  .quick-amounts button:active{background:var(--blue-soft);border-color:var(--blue);}
+
+  .memo-toggle{
+    background:none;border:none;color:var(--blue);font-size:13px;cursor:pointer;
+    padding:6px 0;margin-bottom:6px;text-align:left;
+  }
+
+  .today-total{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding:14px 16px;background:var(--green-soft);border-radius:8px;margin-bottom:14px;
+  }
+  .today-total .l{font-size:13px;color:var(--text-soft);}
+  .today-total .v{font-size:22px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums;}
+
+  .breakdown-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:8px 4px;border-bottom:1px solid #eef0f2;font-size:14px;
+  }
+  .breakdown-row:last-child{border-bottom:none;}
+  .breakdown-row .bname{color:var(--text);}
+  .breakdown-row .bcount{color:var(--text-soft);font-size:12.5px;margin-left:6px;}
+  .breakdown-row .bamt{font-weight:700;color:var(--green);font-variant-numeric:tabular-nums;}
+
+  .sale-item{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:12px 4px;border-bottom:1px solid #eef0f2;font-size:15px;
+  }
+  .sale-item:last-child{border-bottom:none;}
+  .sale-item .time{color:var(--text-soft);font-size:13px;width:52px;flex-shrink:0;}
+  .sale-item .memo{flex:1;color:var(--text-soft);font-size:13px;padding:0 8px;}
+  .sale-item .amt{font-weight:700;color:var(--green);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .sale-item .del{
+    border:none;background:none;color:var(--text-soft);font-size:16px;cursor:pointer;
+    padding:4px 8px;margin-left:6px;
+  }
+  .empty{color:var(--text-soft);text-align:center;padding:28px 0;font-size:14px;}
+
+  .close-summary{margin-bottom:14px;}
+  .close-summary .row{
+    display:flex;justify-content:space-between;padding:10px 4px;
+    border-bottom:1px solid #eef0f2;font-size:15px;
+  }
+  .close-summary .row:last-child{border-bottom:none;}
+  .close-summary .row b{font-variant-numeric:tabular-nums;}
+  .discrepancy-ok{color:var(--green);}
+  .discrepancy-bad{color:var(--red);}
+
+  details.section{margin-bottom:16px;}
+  details.section > summary{cursor:pointer;font-size:14.5px;font-weight:600;padding:6px 2px;color:var(--text-soft);}
+
+  .menu-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+  .menu-manage-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:#fafbfc;
+  }
+  .menu-manage-row .mname{font-weight:600;}
+  .menu-manage-row .mprice{color:var(--green);font-weight:700;font-variant-numeric:tabular-nums;margin-left:8px;}
+  .menu-manage-row .mright{display:flex;align-items:center;gap:10px;}
+  .menu-manage-row button{border:none;background:none;color:var(--text-soft);font-size:15px;cursor:pointer;}
+  .menu-add-row{display:flex;gap:8px;}
+  .menu-add-row input:first-child{flex:2;}
+  .menu-add-row input:last-child{flex:1;}
+
+  .order-card{
+    border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;
+    background:#fff;display:flex;justify-content:space-between;align-items:center;gap:12px;
+  }
+  .order-card.pending{border-color:#f6cf8a;background:var(--amber-soft);}
+  .order-card .oi-name{font-size:17px;font-weight:700;}
+  .order-card .oi-time{font-size:12.5px;color:var(--text-soft);margin-top:2px;}
+  .order-card .done-btn{
+    background:var(--green);color:#fff;border:none;border-radius:8px;
+    padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0;
+  }
+  .order-card.done{opacity:0.6;}
+  .order-card .undo-btn{
+    background:#fff;border:1px solid var(--border);color:var(--text-soft);border-radius:8px;
+    padding:8px 12px;font-size:13px;cursor:pointer;flex-shrink:0;
+  }
+  .kitchen-section-title{font-size:13.5px;color:var(--text-soft);font-weight:700;margin:18px 0 10px;}
+  .del-day-btn{
+    border:none;background:none;color:var(--text-soft);font-size:13px;cursor:pointer;
+    padding:6px 0;text-decoration:underline;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1 id="pageTitle">模擬店 売上管理</h1>
+  <div class="subtitle" id="pageSubtitle">日ごとにレジを開けて、売上を記録します</div>
+  <div class="sync-banner loading" id="syncBanner"><span class="sync-dot"></span><span id="syncBannerText">接続を確認しています…</span></div>
+
+  <!-- ===================== 販売画面 ===================== -->
+  <div class="screen" id="screen-sales">
+    <div class="grand-total">
+      <div class="label">通期 売上合計</div>
+      <div class="value" id="grandTotalSales">¥0</div>
+    </div>
+    <div id="salesPanelRoot"></div>
+  </div>
+
+  <!-- ===================== 調理画面 ===================== -->
+  <div class="screen" id="screen-kitchen">
+    <div id="kitchenPanelRoot"></div>
+  </div>
+
+  <!-- ===================== 管理画面 ===================== -->
+  <div class="screen" id="screen-admin">
+    <div class="grand-total">
+      <div class="label">通期 売上合計</div>
+      <div class="value" id="grandTotalAdmin">¥0</div>
+    </div>
+
+    <div class="day-tabs" id="dayTabs"></div>
+    <div id="adminDayPanelRoot"></div>
+
+    <details class="section">
+      <summary>メニュー管理</summary>
+      <div class="panel" style="margin-top:8px;">
+        <h3>登録メニュー</h3>
+        <div class="menu-list" id="menuList"></div>
+        <div class="menu-add-row">
+          <input type="text" id="newMenuName" placeholder="商品名（例：たこ焼き）">
+          <input type="number" id="newMenuPrice" inputmode="numeric" placeholder="価格">
+          <button class="big-btn primary" id="addMenuBtn" style="width:auto;padding:10px 16px;">追加</button>
+        </div>
+      </div>
+    </details>
+
+    <details class="section">
+      <summary>全日程の記録一覧</summary>
+      <div class="panel" style="margin-top:8px;">
+        <div id="fullLedger"></div>
+      </div>
+    </details>
+  </div>
+
+</div>
+
+<div class="bottom-nav">
+  <div class="nav-btn-wrap">
+    <button class="nav-btn" data-screen="sales">
+      <span class="ic">🛒</span><span class="lb">販売</span>
+    </button>
+  </div>
+  <div class="nav-btn-wrap">
+    <button class="nav-btn" data-screen="kitchen">
+      <span class="ic">🍳</span><span class="lb">調理</span>
+      <span class="badge" id="pendingBadge" style="display:none;"></span>
+    </button>
+  </div>
+  <div class="nav-btn-wrap">
+    <button class="nav-btn" data-screen="admin">
+      <span class="ic">⚙️</span><span class="lb">管理</span>
+    </button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   Supabase configuration
+   ============================================================ */
+const SUPABASE_URL = "https://xwbpulfedlriuayzuxww.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3YnB1bGZlZGxyaXVheXp1eHd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1NTM2OTEsImV4cCI6MjEwNTEyOTY5MX0.XGysaD48oEeNQn9BDgyIYvBFqBTBDULNsVvmORNzr60";
+
+/* ============================================================
+   Data layer: talks to Supabase (shared, realtime across every
+   device). Falls back to this device's localStorage only (with a
+   visible banner) if Supabase can't be reached.
+   ============================================================ */
+
+const K_DAYS = "event_days_income_v1";
+const K_SALES = "event_sales_income_v2";
+const K_MENU = "event_menu_v1";
+const K_SCREEN = "event_screen_v1";
+
+let mode = "loading"; // "supabase" | "local"
+let supabase = null;
+
+let days = [];
+let sales = [];
+let menu = [];
+let activeDayId = null;
+let currentScreen = "sales";
+
+const fmt = new Intl.NumberFormat("ja-JP");
+const yen = n => "¥" + fmt.format(Math.round(n || 0));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const todayStr = () => new Date().toISOString().slice(0,10);
+const nowTime = () => { const d=new Date(); return d.getHours().toString().padStart(2,"0")+":"+d.getMinutes().toString().padStart(2,"0"); };
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+}
+
+/* ---------- mapping between DB (snake_case) and app (camelCase) ---------- */
+function mapDay(row){
+  return {
+    id: row.id, date: row.date, status: row.status,
+    openingCash: Number(row.opening_cash) || 0,
+    closingCash: row.closing_cash === null || row.closing_cash === undefined ? null : Number(row.closing_cash),
+    openedAt: row.opened_at, closedAt: row.closed_at
+  };
+}
+function mapSale(row){
+  return {
+    id: row.id, dayId: row.day_id, time: row.time,
+    amount: Number(row.amount) || 0, item: row.item, memo: row.memo, status: row.status
+  };
+}
+function mapMenuItem(row){
+  return { id: row.id, name: row.name, price: Number(row.price) || 0 };
+}
+
+/* ---------- local fallback storage ---------- */
+function loadLocal(){
+  try{ days = JSON.parse(localStorage.getItem(K_DAYS)) || []; }catch(e){ days = []; }
+  try{ sales = JSON.parse(localStorage.getItem(K_SALES)) || []; }catch(e){ sales = []; }
+  try{ menu = JSON.parse(localStorage.getItem(K_MENU)) || []; }catch(e){ menu = []; }
+}
+function saveLocalDays(){ localStorage.setItem(K_DAYS, JSON.stringify(days)); }
+function saveLocalSales(){ localStorage.setItem(K_SALES, JSON.stringify(sales)); }
+function saveLocalMenu(){ localStorage.setItem(K_MENU, JSON.stringify(menu)); }
+
+try{ currentScreen = localStorage.getItem(K_SCREEN) || "sales"; }catch(e){ currentScreen = "sales"; }
+function saveScreen(){ try{ localStorage.setItem(K_SCREEN, currentScreen); }catch(e){} }
+
+/* ---------- derived helpers ---------- */
+function getDay(id){ return days.find(d => d.id === id); }
+function getOpenDay(){ return days.find(d => d.status==="open") || null; }
+function salesForDay(id){ return sales.filter(s=>s.dayId===id).sort((a,b)=> (a.time||"") < (b.time||"") ? -1 : 1); }
+function daySalesTotal(id){ return salesForDay(id).reduce((s,x)=>s+x.amount,0); }
+function grandTotal(){ return sales.reduce((s,x)=>s+x.amount,0); }
+function itemBreakdown(list){
+  const map = {};
+  list.forEach(s=>{
+    const key = s.item ? s.item : "その他";
+    if(!map[key]) map[key] = {count:0, amount:0};
+    map[key].count += 1;
+    map[key].amount += s.amount;
+  });
+  return Object.entries(map).sort((a,b)=>b[1].amount - a[1].amount);
+}
+
+function setSyncBanner(state){
+  const el = document.getElementById("syncBanner");
+  const txt = document.getElementById("syncBannerText");
+  el.className = "sync-banner " + state;
+  if(state === "online") txt.textContent = "オンライン同期中（Supabase）— 他の端末と共有されています";
+  else if(state === "offline") txt.textContent = "この端末のみのデータです（Supabaseに接続できません）";
+  else txt.textContent = "接続を確認しています…";
+}
+
+/* ============================================================
+   Supabase read + realtime subscribe
+   ============================================================ */
+async function reloadDaysFromDb(){
+  const { data, error } = await supabase.from("days").select("*").order("created_at", { ascending: true });
+  if(error){ console.error(error); setSyncBanner("offline"); return; }
+  days = data.map(mapDay);
+  renderCurrentScreen();
+}
+async function reloadSalesFromDb(){
+  const { data, error } = await supabase.from("sales").select("*").order("created_at", { ascending: true });
+  if(error){ console.error(error); setSyncBanner("offline"); return; }
+  sales = data.map(mapSale);
+  renderCurrentScreen();
+}
+async function reloadMenuFromDb(){
+  const { data, error } = await supabase.from("menu").select("*").order("created_at", { ascending: true });
+  if(error){ console.error(error); setSyncBanner("offline"); return; }
+  menu = data.map(mapMenuItem);
+  renderCurrentScreen();
+}
+
+function subscribeRealtime(){
+  supabase.channel("days-changes")
+    .on("postgres_changes", { event: "*", schema: "public", table: "days" }, reloadDaysFromDb)
+    .subscribe();
+  supabase.channel("sales-changes")
+    .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, reloadSalesFromDb)
+    .subscribe();
+  supabase.channel("menu-changes")
+    .on("postgres_changes", { event: "*", schema: "public", table: "menu" }, reloadMenuFromDb)
+    .subscribe();
+}
+
+/* ============================================================
+   Write operations — each has a Supabase path and a local-fallback path
+   ============================================================ */
+
+async function addDayOp(){
+  const lastDate = days.length ? days[days.length-1].date : todayStr();
+  const next = new Date(lastDate);
+  if(days.length) next.setDate(next.getDate()+1);
+  const date = next.toISOString().slice(0,10);
+
+  if(mode === "supabase"){
+    const { data, error } = await supabase.from("days").insert({
+      date, status: "not_opened", opening_cash: 0, closing_cash: null, opened_at: null, closed_at: null
+    }).select().single();
+    if(error){ alert("日の追加に失敗しました: " + error.message); return; }
+    activeDayId = data.id;
+    await reloadDaysFromDb();
+  } else {
+    const nd = { id: uid(), date, status:"not_opened", openingCash:0, closingCash:null, openedAt:null, closedAt:null };
+    days.push(nd);
+    saveLocalDays();
+    activeDayId = nd.id;
+    renderCurrentScreen();
+  }
+}
+
+async function deleteDayOp(day){
+  const relatedSales = sales.filter(s=>s.dayId===day.id);
+  if(!confirm(`「${day.date}」を削除します。この日の記録${relatedSales.length}件も一緒に削除されます。よろしいですか？`)) return;
+  if(mode === "supabase"){
+    const { error } = await supabase.from("days").delete().eq("id", day.id); // sales cascade automatically
+    if(error){ alert("削除に失敗しました: " + error.message); return; }
+    await reloadDaysFromDb();
+    await reloadSalesFromDb();
+  } else {
+    sales = sales.filter(s=>s.dayId!==day.id);
+    days = days.filter(d=>d.id!==day.id);
+    saveLocalSales(); saveLocalDays();
+    if(activeDayId===day.id) activeDayId = days[days.length-1]?.id || null;
+    renderCurrentScreen();
+  }
+}
+
+async function openPosOp(day, dateVal, opening){
+  if(mode === "supabase"){
+    const { error } = await supabase.from("days").update({
+      date: dateVal, opening_cash: opening, status: "open", opened_at: new Date().toISOString()
+    }).eq("id", day.id);
+    if(error){ alert("開店に失敗しました: " + error.message); return; }
+  } else {
+    Object.assign(day, { date: dateVal, openingCash: opening, status:"open", openedAt: new Date().toISOString() });
+    saveLocalDays();
+    renderCurrentScreen();
+  }
+}
+
+async function closePosOp(day, counted){
+  if(mode === "supabase"){
+    const { error } = await supabase.from("days").update({
+      closing_cash: counted, status: "closed", closed_at: new Date().toISOString()
+    }).eq("id", day.id);
+    if(error){ alert("閉店に失敗しました: " + error.message); return; }
+  } else {
+    Object.assign(day, { closingCash: counted, status:"closed", closedAt: new Date().toISOString() });
+    saveLocalDays();
+    renderCurrentScreen();
+  }
+}
+
+async function reopenDayOp(day){
+  if(mode === "supabase"){
+    const { error } = await supabase.from("days").update({ status: "open", closing_cash: null, closed_at: null }).eq("id", day.id);
+    if(error){ alert("操作に失敗しました: " + error.message); return; }
+  } else {
+    Object.assign(day, { status:"open", closingCash:null, closedAt:null });
+    saveLocalDays();
+    renderCurrentScreen();
+  }
+}
+
+async function addSaleOp(data){
+  if(mode === "supabase"){
+    const { error } = await supabase.from("sales").insert({
+      day_id: data.dayId, time: data.time, amount: data.amount, item: data.item, memo: data.memo, status: data.status
+    });
+    if(error){ alert("記録に失敗しました: " + error.message); return; }
+  } else {
+    sales.push({ id: uid(), ...data });
+    saveLocalSales();
+    renderCurrentScreen();
+  }
+}
+
+async function deleteSaleOp(id){
+  if(mode === "supabase"){
+    const { error } = await supabase.from("sales").delete().eq("id", id);
+    if(error){ alert("削除に失敗しました: " + error.message); return; }
+  } else {
+    sales = sales.filter(s=>s.id!==id);
+    saveLocalSales();
+    renderCurrentScreen();
+  }
+}
+
+async function setSaleStatusOp(id, status){
+  if(mode === "supabase"){
+    const { error } = await supabase.from("sales").update({ status }).eq("id", id);
+    if(error){ alert("更新に失敗しました: " + error.message); return; }
+  } else {
+    const s = sales.find(x=>x.id===id);
+    if(s){ s.status = status; saveLocalSales(); renderCurrentScreen(); }
+  }
+}
+
+async function addMenuOp(name, price){
+  if(mode === "supabase"){
+    const { error } = await supabase.from("menu").insert({ name, price });
+    if(error){ alert("追加に失敗しました: " + error.message); return; }
+  } else {
+    menu.push({ id: uid(), name, price });
+    saveLocalMenu();
+    renderCurrentScreen();
+  }
+}
+
+async function deleteMenuOp(id){
+  if(mode === "supabase"){
+    const { error } = await supabase.from("menu").delete().eq("id", id);
+    if(error){ alert("削除に失敗しました: " + error.message); return; }
+  } else {
+    menu = menu.filter(m=>m.id!==id);
+    saveLocalMenu();
+    renderCurrentScreen();
+  }
+}
+
+/* ============================================================
+   NAV
+   ============================================================ */
+function switchScreen(name){
+  currentScreen = name;
+  saveScreen();
+  document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
+  document.getElementById("screen-"+name).classList.add("active");
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.screen === name));
+  const titles = {
+    sales: ["模擬店 売上管理", "メニューをタップして売上を記録します"],
+    kitchen: ["調理画面", "入った注文を確認して、完成したらチェックします"],
+    admin: ["管理画面", "レジの開店・閉店、メニュー、全体の記録を管理します"]
+  };
+  document.getElementById("pageTitle").textContent = titles[name][0];
+  document.getElementById("pageSubtitle").textContent = titles[name][1];
+  renderCurrentScreen();
+}
+document.querySelectorAll(".nav-btn").forEach(b=>{
+  b.addEventListener("click", ()=> switchScreen(b.dataset.screen));
+});
+
+function renderCurrentScreen(){
+  if(!activeDayId || !getDay(activeDayId)) activeDayId = days.length ? days[days.length-1].id : null;
+  if(currentScreen === "sales") renderSalesScreen();
+  else if(currentScreen === "kitchen") renderKitchenScreen();
+  else renderAdminScreen();
+  renderPendingBadge();
+}
+
+/* ============================================================
+   SALES SCREEN
+   ============================================================ */
+function renderMenuPicker(){
+  if(menu.length === 0){
+    return `<div class="menu-empty-hint">管理画面の「メニュー管理」で商品を登録すると、ここからワンタップで記録できます</div>`;
+  }
+  return `<div class="menu-grid">
+    ${menu.map(m => `
+      <button type="button" class="menu-item-btn" data-id="${m.id}">
+        <span class="mi-name">${escapeHtml(m.name)}</span>
+        <span class="mi-price">${yen(m.price)}</span>
+      </button>
+    `).join("")}
+  </div>`;
+}
+
+function renderSalesScreen(){
+  document.getElementById("grandTotalSales").textContent = yen(grandTotal());
+  const root = document.getElementById("salesPanelRoot");
+  const day = getOpenDay();
+
+  if(days.length === 0){
+    root.innerHTML = `
+      <div class="panel">
+        <div class="status-banner not_opened">まだ日程が登録されていません</div>
+        <p style="color:var(--text-soft);font-size:13.5px;">管理画面で日程を追加してください。</p>
+        <button class="big-btn primary" id="goAdminBtn">管理画面を開く</button>
+      </div>
+    `;
+    document.getElementById("goAdminBtn").addEventListener("click", ()=> switchScreen("admin"));
+    return;
+  }
+
+  if(!day){
+    root.innerHTML = `
+      <div class="panel">
+        <div class="status-banner not_opened">今日はまだレジが開いていません</div>
+        <p style="color:var(--text-soft);font-size:13.5px;">管理画面からこの日のレジを開店してください。</p>
+        <button class="big-btn primary" id="goAdminBtn">管理画面を開く</button>
+      </div>
+    `;
+    document.getElementById("goAdminBtn").addEventListener("click", ()=> switchScreen("admin"));
+    return;
+  }
+
+  const total = daySalesTotal(day.id);
+  const list = salesForDay(day.id);
+
+  root.innerHTML = `
+    <div class="panel">
+      <div class="status-banner open">営業中（${day.date}）</div>
+
+      ${renderMenuPicker()}
+
+      <button type="button" class="custom-toggle" id="customToggle">＋ メニューにない金額を直接入力する</button>
+      <div class="custom-box" id="customBox" style="display:none;">
+        <input type="number" inputmode="numeric" class="sale-amount-input" id="saleAmount" placeholder="0" autocomplete="off">
+        <div class="quick-amounts">
+          <button type="button" data-amt="100">+100</button>
+          <button type="button" data-amt="300">+300</button>
+          <button type="button" data-amt="500">+500</button>
+          <button type="button" data-amt="1000">+1000</button>
+        </div>
+        <button type="button" class="memo-toggle" id="memoToggle">＋ メモを追加（任意）</button>
+        <div class="field" id="memoField" style="display:none;">
+          <input type="text" id="saleMemo" placeholder="例）割引販売">
+        </div>
+        <button class="big-btn primary" id="addSaleBtn">この金額を記録する</button>
+      </div>
+
+      <div class="today-total" style="margin-top:18px;">
+        <span class="l">本日の売上合計</span>
+        <span class="v">${yen(total)}</span>
+      </div>
+
+      <h3>直近の記録</h3>
+      <div>
+        ${list.length===0 ? '<div class="empty">まだ記録がありません</div>' : list.slice(0,8).map(s=>`
+          <div class="sale-item">
+            <span class="time">${s.time||""}</span>
+            <span class="memo">${escapeHtml(s.item || s.memo || "")}</span>
+            <span class="amt">+${yen(s.amount)}</span>
+            <button class="del" data-id="${s.id}">✕</button>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+
+  root.querySelectorAll(".menu-item-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const item = menu.find(m=>m.id===btn.dataset.id);
+      if(!item) return;
+      addSaleOp({ dayId: day.id, time: nowTime(), amount: item.price, item: item.name, memo: "", status: "pending" });
+    });
+  });
+
+  const customToggle = document.getElementById("customToggle");
+  if(customToggle){
+    customToggle.addEventListener("click", ()=>{
+      const box = document.getElementById("customBox");
+      const show = box.style.display === "none";
+      box.style.display = show ? "block" : "none";
+      if(show) document.getElementById("saleAmount").focus();
+    });
+  }
+
+  const amountInput = document.getElementById("saleAmount");
+  if(amountInput){
+    document.querySelectorAll(".quick-amounts button").forEach(b=>{
+      b.addEventListener("click", ()=>{
+        const cur = parseFloat(amountInput.value) || 0;
+        amountInput.value = cur + parseFloat(b.dataset.amt);
+      });
+    });
+    document.getElementById("memoToggle").addEventListener("click", ()=>{
+      const f = document.getElementById("memoField");
+      const show = f.style.display === "none";
+      f.style.display = show ? "block" : "none";
+      if(show) document.getElementById("saleMemo").focus();
+    });
+    document.getElementById("addSaleBtn").addEventListener("click", async ()=>{
+      const amount = parseFloat(amountInput.value);
+      if(!amount || amount<=0){ amountInput.focus(); return; }
+      const memo = (document.getElementById("saleMemo")?.value||"").trim();
+      await addSaleOp({ dayId: day.id, time: nowTime(), amount, item: null, memo, status: "done" });
+      const box = document.getElementById("customBox");
+      const a = document.getElementById("saleAmount");
+      if(box) box.style.display = "block";
+      if(a){ a.value=""; a.focus(); }
+    });
+  }
+
+  root.querySelectorAll(".del").forEach(b=>{
+    b.addEventListener("click", ()=> deleteSaleOp(b.dataset.id));
+  });
+}
+
+/* ============================================================
+   KITCHEN SCREEN
+   ============================================================ */
+function renderPendingBadge(){
+  const day = getOpenDay();
+  const count = day ? sales.filter(s=>s.dayId===day.id && s.status==="pending").length : 0;
+  const badge = document.getElementById("pendingBadge");
+  if(count > 0){
+    badge.style.display = "flex";
+    badge.textContent = count > 99 ? "99+" : count;
+  } else {
+    badge.style.display = "none";
+  }
+}
+
+function renderKitchenScreen(){
+  const root = document.getElementById("kitchenPanelRoot");
+  const day = getOpenDay();
+
+  if(!day){
+    root.innerHTML = `
+      <div class="panel">
+        <div class="status-banner not_opened">現在、営業中の日がありません</div>
+        <p style="color:var(--text-soft);font-size:13.5px;">レジが開店すると、ここに注文が表示されます。</p>
+      </div>
+    `;
+    return;
+  }
+
+  const list = salesForDay(day.id).filter(s => s.item);
+  const pending = list.filter(s=>s.status==="pending").sort((a,b)=> (a.time||"") < (b.time||"") ? -1 : 1);
+  const done = list.filter(s=>s.status==="done").sort((a,b)=> (a.time||"") < (b.time||"") ? 1 : -1).slice(0,10);
+
+  root.innerHTML = `
+    <div class="kitchen-section-title">未調理（${pending.length}件）</div>
+    ${pending.length===0 ? '<div class="empty">今のところ、新しい注文はありません</div>' : pending.map(s=>`
+      <div class="order-card pending">
+        <div>
+          <div class="oi-name">${escapeHtml(s.item)}</div>
+          <div class="oi-time">${s.time||""} に注文</div>
+        </div>
+        <button class="done-btn" data-id="${s.id}">完成</button>
+      </div>
+    `).join("")}
+
+    <div class="kitchen-section-title">完成済み（直近）</div>
+    ${done.length===0 ? '<div class="empty">まだ完成した注文はありません</div>' : done.map(s=>`
+      <div class="order-card done">
+        <div>
+          <div class="oi-name">${escapeHtml(s.item)}</div>
+          <div class="oi-time">${s.time||""} に注文</div>
+        </div>
+        <button class="undo-btn" data-id="${s.id}">未調理に戻す</button>
+      </div>
+    `).join("")}
+  `;
+
+  root.querySelectorAll(".done-btn").forEach(b=>{
+    b.addEventListener("click", ()=> setSaleStatusOp(b.dataset.id, "done"));
+  });
+  root.querySelectorAll(".undo-btn").forEach(b=>{
+    b.addEventListener("click", ()=> setSaleStatusOp(b.dataset.id, "pending"));
+  });
+}
+
+/* ============================================================
+   ADMIN SCREEN
+   ============================================================ */
+function renderDayTabs(){
+  const root = document.getElementById("dayTabs");
+  root.innerHTML = days.map(d=>`
+    <button class="day-tab ${d.id===activeDayId?'active':''}" data-day="${d.id}">
+      <span class="dot ${d.status}"></span>${d.date.slice(5)}
+    </button>
+  `).join("") + `<button class="add-day-btn" id="addDayBtn">＋ 日を追加</button>`;
+
+  root.querySelectorAll(".day-tab").forEach(btn=>{
+    btn.addEventListener("click", ()=>{ activeDayId = btn.dataset.day; renderAdminScreen(); });
+  });
+  document.getElementById("addDayBtn").addEventListener("click", addDayOp);
+}
+
+function renderAdminScreen(){
+  document.getElementById("grandTotalAdmin").textContent = yen(grandTotal());
+  renderDayTabs();
+  renderAdminDayPanel();
+  renderMenuList();
+  renderFullLedger();
+}
+
+function renderAdminDayPanel(){
+  const day = getDay(activeDayId);
+  const root = document.getElementById("adminDayPanelRoot");
+  if(!day){
+    root.innerHTML = `
+      <div class="panel">
+        <div class="status-banner not_opened">まだ日程がありません</div>
+        <button class="big-btn primary" id="addFirstDayBtn">最初の日を追加する</button>
+      </div>
+    `;
+    document.getElementById("addFirstDayBtn").addEventListener("click", addDayOp);
+    return;
+  }
+
+  if(day.status === "not_opened"){
+    root.innerHTML = `
+      <div class="panel">
+        <div class="status-banner not_opened">この日はまだ開店していません</div>
+        <div class="field">
+          <label for="dayDateInput">日付</label>
+          <input type="date" id="dayDateInput" value="${day.date}">
+        </div>
+        <div class="field">
+          <label for="openingCashInput">開始時のレジ金（釣り銭）</label>
+          <input type="number" inputmode="numeric" id="openingCashInput" min="0" step="1" value="0">
+        </div>
+        <button class="big-btn primary" id="openPosBtn">この日を開店する</button>
+        <button class="del-day-btn" id="delDayBtn">この日を削除する</button>
+      </div>
+    `;
+    document.getElementById("openPosBtn").addEventListener("click", ()=>{
+      const dateVal = document.getElementById("dayDateInput").value || day.date;
+      const opening = parseFloat(document.getElementById("openingCashInput").value) || 0;
+      openPosOp(day, dateVal, opening);
+    });
+    document.getElementById("delDayBtn").addEventListener("click", ()=> deleteDayOp(day));
+    return;
+  }
+
+  if(day.status === "open"){
+    const total = daySalesTotal(day.id);
+    const list = salesForDay(day.id);
+    const breakdown = itemBreakdown(list);
+
+    root.innerHTML = `
+      <div class="panel">
+        <div class="status-banner open">営業中</div>
+
+        <div class="today-total">
+          <span class="l">本日の売上合計</span>
+          <span class="v">${yen(total)}</span>
+        </div>
+
+        ${breakdown.length > 0 ? `
+          <h3>本日の内訳</h3>
+          <div style="margin-bottom:14px;">
+            ${breakdown.map(([name, d]) => `
+              <div class="breakdown-row">
+                <span class="bname">${escapeHtml(name)}<span class="bcount">× ${d.count}</span></span>
+                <span class="bamt">${yen(d.amount)}</span>
+              </div>
+            `).join("")}
+          </div>
+        ` : ""}
+
+        <h3>本日の記録</h3>
+        <div>
+          ${list.length===0 ? '<div class="empty">まだ記録がありません</div>' : list.map(s=>`
+            <div class="sale-item">
+              <span class="time">${s.time||""}</span>
+              <span class="memo">${escapeHtml(s.item || s.memo || "")}</span>
+              <span class="amt">+${yen(s.amount)}</span>
+              <button class="del" data-id="${s.id}">✕</button>
+            </div>
+          `).join("")}
+        </div>
+
+        <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:16px;">
+          <div class="field">
+            <label for="closingCashInput">閉店時にレジを数えた金額</label>
+            <input type="number" inputmode="numeric" id="closingCashInput" min="0" step="1" placeholder="0">
+          </div>
+          <button class="big-btn outline" id="closePosBtn">この日を閉店する</button>
+        </div>
+      </div>
+    `;
+
+    root.querySelectorAll(".del").forEach(b=>{
+      b.addEventListener("click", ()=> deleteSaleOp(b.dataset.id));
+    });
+
+    document.getElementById("closePosBtn").addEventListener("click", ()=>{
+      const counted = parseFloat(document.getElementById("closingCashInput").value);
+      if(isNaN(counted)){ alert("レジを数えた金額を入力してください"); return; }
+      const stillPending = list.filter(s=>s.status==="pending").length;
+      if(stillPending > 0){
+        const ok = confirm(`まだ調理中の注文が${stillPending}件あります。このまま閉店しますか？`);
+        if(!ok) return;
+      }
+      closePosOp(day, counted);
+    });
+
+    return;
+  }
+
+  if(day.status === "closed"){
+    const total = daySalesTotal(day.id);
+    const list = salesForDay(day.id);
+    const breakdown = itemBreakdown(list);
+    const expected = day.openingCash + total;
+    const diff = (day.closingCash||0) - expected;
+    const diffClass = diff === 0 ? "discrepancy-ok" : "discrepancy-bad";
+    const diffLabel = diff === 0 ? "差異なし" : (diff > 0 ? `+${yen(diff)}（多い）` : `${yen(diff)}（少ない）`);
+
+    root.innerHTML = `
+      <div class="panel">
+        <div class="status-banner closed">閉店済み</div>
+
+        <div class="close-summary">
+          <div class="row"><span>開始レジ金</span><b>${yen(day.openingCash)}</b></div>
+          <div class="row"><span>売上合計</span><b>${yen(total)}</b></div>
+          <div class="row"><span>想定レジ残高</span><b>${yen(expected)}</b></div>
+          <div class="row"><span>実査金額</span><b>${yen(day.closingCash)}</b></div>
+          <div class="row"><span>差異</span><b class="${diffClass}">${diffLabel}</b></div>
+        </div>
+
+        <button class="big-btn outline" id="reopenBtn">修正のため、もう一度開ける</button>
+
+        ${breakdown.length > 0 ? `
+          <h3 style="margin-top:18px;">内訳</h3>
+          <div style="margin-bottom:6px;">
+            ${breakdown.map(([name, d]) => `
+              <div class="breakdown-row">
+                <span class="bname">${escapeHtml(name)}<span class="bcount">× ${d.count}</span></span>
+                <span class="bamt">${yen(d.amount)}</span>
+              </div>
+            `).join("")}
+          </div>
+        ` : ""}
+
+        <div style="margin-top:16px;">
+          ${list.length===0 ? '<div class="empty">記録がありません</div>' : list.map(s=>`
+            <div class="sale-item">
+              <span class="time">${s.time||""}</span>
+              <span class="memo">${escapeHtml(s.item || s.memo || "")}</span>
+              <span class="amt">+${yen(s.amount)}</span>
+              <span style="width:28px;"></span>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+    document.getElementById("reopenBtn").addEventListener("click", ()=> reopenDayOp(day));
+    return;
+  }
+}
+
+function renderMenuList(){
+  const root = document.getElementById("menuList");
+  if(menu.length === 0){
+    root.innerHTML = `<div style="color:var(--text-soft);font-size:13px;">まだメニューが登録されていません</div>`;
+  } else {
+    root.innerHTML = menu.map(m => `
+      <div class="menu-manage-row">
+        <span><span class="mname">${escapeHtml(m.name)}</span><span class="mprice">${yen(m.price)}</span></span>
+        <div class="mright">
+          <button data-id="${m.id}" class="rm-menu">✕</button>
+        </div>
+      </div>
+    `).join("");
+    root.querySelectorAll(".rm-menu").forEach(b=>{
+      b.addEventListener("click", ()=> deleteMenuOp(b.dataset.id));
+    });
+  }
+}
+document.getElementById("addMenuBtn").addEventListener("click", ()=>{
+  const nameInput = document.getElementById("newMenuName");
+  const priceInput = document.getElementById("newMenuPrice");
+  const name = nameInput.value.trim();
+  const price = parseFloat(priceInput.value);
+  if(!name || !price || price<=0) return;
+  addMenuOp(name, price);
+  nameInput.value = "";
+  priceInput.value = "";
+  nameInput.focus();
+});
+document.getElementById("newMenuPrice").addEventListener("keydown", (e)=>{
+  if(e.key === "Enter"){ e.preventDefault(); document.getElementById("addMenuBtn").click(); }
+});
+
+function renderFullLedger(){
+  const root = document.getElementById("fullLedger");
+  const allSales = sales.slice().sort((a,b)=>{
+    const da = getDay(a.dayId)?.date || "";
+    const db_ = getDay(b.dayId)?.date || "";
+    if(da !== db_) return da < db_ ? 1 : -1;
+    return (a.time||"") < (b.time||"") ? 1 : -1;
+  });
+  if(allSales.length === 0){
+    root.innerHTML = `<div class="empty">まだ記録がありません</div>`;
+    return;
+  }
+  root.innerHTML = allSales.map(s=>{
+    const d = getDay(s.dayId);
+    return `
+      <div class="sale-item">
+        <span class="time" style="width:80px;">${d?d.date.slice(5):""} ${s.time||""}</span>
+        <span class="memo">${escapeHtml(s.item || s.memo || "")}</span>
+        <span class="amt">+${yen(s.amount)}</span>
+        <span style="width:0;"></span>
+      </div>
+    `;
+  }).join("");
+}
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+async function boot(){
+  document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
+  document.getElementById("screen-"+currentScreen).classList.add("active");
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.screen === currentScreen));
+
+  try{
+    if(!window.supabase || !window.supabase.createClient) throw new Error("supabase-js failed to load");
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    await reloadDaysFromDb();
+    await reloadSalesFromDb();
+    await reloadMenuFromDb();
+    mode = "supabase";
+    setSyncBanner("online");
+    subscribeRealtime();
+  } catch(e){
+    console.error("Supabase init failed, falling back to local storage", e);
+    mode = "local";
+    loadLocal();
+    activeDayId = days.length ? days[days.length-1].id : null;
+    setSyncBanner("offline");
+    renderCurrentScreen();
+  }
+}
+
+boot();
+
+})();
+</script>
+</body>
+</html>
