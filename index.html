@@ -649,84 +649,95 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
     <path d="M-20,750 Q200,-12 420,750" fill="none" stroke="#29b6f6" stroke-width="13" opacity="0.3"/>
     <path d="M-20,750 Q200,4  420,750" fill="none" stroke="#ab47bc" stroke-width="12" opacity="0.26"/>
 
-    <!-- ====== 燕シルエット ======
-         基本パス（右向き 130×85px）:
-         左翼: M75,32 C58,16 35,6 6,2 C22,16 32,26 34,38 C24,28 12,22 0,24 C14,32 28,36 34,44 Z
-         右翼: M75,32 C90,18 108,10 128,8 C114,20 106,28 104,38 C112,30 120,26 130,28 C118,34 108,38 104,44 Z
-         胴体: ellipse cx=75 cy=42 rx=22 ry=10
-         頭:   ellipse cx=95 cy=30 rx=11 ry=10
-         くちばし: M107,28 L117,26 L107,32
-         尾上: M56,46 C42,54 28,66 14,82
-         尾下: M58,44 C46,38 32,28 16,14
+    <!-- ====== じゃがバターちゃん ======
+         ローカル座標 (足元 0,0〜130,85 に収まるよう設計、以前の燕と同じ
+         translate/scale/rotate値を流用して配置を保っています)
+         体: ふっくらしたポテト形（楕円＋斑点）
+         上部: 十字の切れ込み＋バター＋てり
+         顔: まる目＋ほお赤らめ＋にっこり口
     -->
 
-    <!-- 大燕①：中央やや左上 scale=1.5, x=80, y=25 -->
+    <!-- 大①：中央やや左上 scale=1.5, x=80, y=25 -->
     <g class="sw-a1" style="transform-origin:193px 95px">
-      <g transform="translate(80,25) scale(1.5) rotate(-8,75,42)">
-        <path d="M75,32 C58,16 35,6 6,2 C22,16 32,26 34,38 C24,28 12,22 0,24 C14,32 28,36 34,44 Z" fill="#00897b" opacity="0.9"/>
-        <path d="M75,32 C90,18 108,10 128,8 C114,20 106,28 104,38 C112,30 120,26 130,28 C118,34 108,38 104,44 Z" fill="#00897b" opacity="0.9"/>
-        <path d="M75,32 C62,20 46,12 24,8 C36,20 42,28 42,38 C34,30 26,26 16,28 C26,34 38,38 40,44 Z" fill="#4dd0e1" opacity="0.55"/>
-        <path d="M75,32 C86,22 100,14 116,12 C106,22 100,30 100,38 C106,32 114,28 122,30 C112,36 104,40 100,44 Z" fill="#4dd0e1" opacity="0.5"/>
-        <ellipse cx="75" cy="42" rx="22" ry="10" fill="#006064"/>
-        <ellipse cx="75" cy="47" rx="14" ry="7" fill="#e0f7fa" opacity="0.45"/>
-        <ellipse cx="95" cy="30" rx="11" ry="10" fill="#006064"/>
-        <path d="M107,28 L117,26 L107,32 Z" fill="#004d40"/>
-        <path d="M56,46 C42,54 28,66 14,82" stroke="#006064" stroke-width="7" fill="none" stroke-linecap="round"/>
-        <path d="M58,44 C46,38 32,28 16,14" stroke="#006064" stroke-width="7" fill="none" stroke-linecap="round"/>
-        <path d="M56,46 C44,56 32,68 20,84" stroke="#26c6da" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.5"/>
-        <path d="M58,44 C48,36 36,26 22,12" stroke="#26c6da" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.5"/>
+      <g transform="translate(80,25) scale(1.5) rotate(-4,65,48)">
+        <ellipse cx="66" cy="52" rx="40" ry="27" fill="#e0a868"/>
+        <ellipse cx="66" cy="52" rx="40" ry="27" fill="none" stroke="#c98a4b" stroke-width="2"/>
+        <ellipse cx="42" cy="42" rx="3" ry="2.4" fill="#c98a4b" opacity="0.7"/>
+        <ellipse cx="88" cy="58" rx="2.6" ry="2" fill="#c98a4b" opacity="0.7"/>
+        <ellipse cx="56" cy="64" rx="2.2" ry="1.8" fill="#c98a4b" opacity="0.6"/>
+        <path d="M46,34 Q66,20 86,34 Q66,30 46,34 Z" fill="#fff3d1"/>
+        <rect x="55" y="20" width="22" height="11" rx="4" fill="#ffd54f"/>
+        <path d="M58,29 Q66,40 60,46" stroke="#ffe082" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.85"/>
+        <circle cx="52" cy="57" r="3.6" fill="#3e2723"/>
+        <circle cx="80" cy="57" r="3.6" fill="#3e2723"/>
+        <circle cx="53" cy="55.5" r="1" fill="#fff" opacity="0.9"/>
+        <circle cx="81" cy="55.5" r="1" fill="#fff" opacity="0.9"/>
+        <circle cx="44" cy="65" r="5.5" fill="#ffab91" opacity="0.55"/>
+        <circle cx="88" cy="65" r="5.5" fill="#ffab91" opacity="0.55"/>
+        <path d="M58,66 Q66,72 74,66" stroke="#8d5524" stroke-width="2.2" fill="none" stroke-linecap="round"/>
       </g>
     </g>
 
-    <!-- 中燕②：右寄り中段 scale=0.9, x=230, y=120 -->
+    <!-- 中②：右寄り中段 scale=0.9, x=230, y=120 -->
     <g class="sw-a3" style="transform-origin:298px 162px">
-      <g transform="translate(230,120) scale(0.9) rotate(14,75,42)">
-        <path d="M75,32 C58,16 35,6 6,2 C22,16 32,26 34,38 C24,28 12,22 0,24 C14,32 28,36 34,44 Z" fill="#0097a7" opacity="0.82"/>
-        <path d="M75,32 C90,18 108,10 128,8 C114,20 106,28 104,38 C112,30 120,26 130,28 C118,34 108,38 104,44 Z" fill="#0097a7" opacity="0.82"/>
-        <path d="M75,32 C62,20 46,12 24,8 C36,20 42,28 42,38 C34,30 26,26 16,28 C26,34 38,38 40,44 Z" fill="#4dd0e1" opacity="0.5"/>
-        <path d="M75,32 C86,22 100,14 116,12 C106,22 100,30 100,38 C106,32 114,28 122,30 C112,36 104,40 100,44 Z" fill="#4dd0e1" opacity="0.45"/>
-        <ellipse cx="75" cy="42" rx="22" ry="10" fill="#00838f"/>
-        <ellipse cx="75" cy="47" rx="14" ry="7" fill="#e0f7fa" opacity="0.4"/>
-        <ellipse cx="95" cy="30" rx="11" ry="10" fill="#00838f"/>
-        <path d="M107,28 L117,26 L107,32 Z" fill="#00695c"/>
-        <path d="M56,46 C42,54 28,66 14,82" stroke="#00838f" stroke-width="6" fill="none" stroke-linecap="round"/>
-        <path d="M58,44 C46,38 32,28 16,14" stroke="#00838f" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <g transform="translate(230,120) scale(0.9) rotate(6,65,48)">
+        <ellipse cx="66" cy="52" rx="40" ry="27" fill="#d99a5b"/>
+        <ellipse cx="66" cy="52" rx="40" ry="27" fill="none" stroke="#b87a3e" stroke-width="2"/>
+        <ellipse cx="44" cy="44" rx="2.6" ry="2" fill="#b87a3e" opacity="0.65"/>
+        <ellipse cx="84" cy="60" rx="2.4" ry="1.8" fill="#b87a3e" opacity="0.65"/>
+        <path d="M46,34 Q66,20 86,34 Q66,30 46,34 Z" fill="#fff3d1"/>
+        <rect x="55" y="20" width="22" height="11" rx="4" fill="#ffca28"/>
+        <path d="M58,29 Q66,40 60,46" stroke="#ffe082" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.8"/>
+        <circle cx="52" cy="57" r="3.4" fill="#3e2723"/>
+        <circle cx="80" cy="57" r="3.4" fill="#3e2723"/>
+        <circle cx="44" cy="65" r="5" fill="#ffab91" opacity="0.5"/>
+        <circle cx="88" cy="65" r="5" fill="#ffab91" opacity="0.5"/>
+        <path d="M58,66 Q66,71 74,66" stroke="#8d5524" stroke-width="2" fill="none" stroke-linecap="round"/>
       </g>
     </g>
 
-    <!-- 小燕③：左端 scale=0.65, x=20, y=150 -->
+    <!-- 小③：左端 scale=0.65, x=20, y=150 -->
     <g class="sw-a2" style="transform-origin:69px 195px">
-      <g transform="translate(20,150) scale(0.65) rotate(22,75,42)">
-        <path d="M75,32 C58,16 35,6 6,2 C22,16 32,26 34,38 C24,28 12,22 0,24 C14,32 28,36 34,44 Z" fill="#26c6da" opacity="0.78"/>
-        <path d="M75,32 C90,18 108,10 128,8 C114,20 106,28 104,38 C112,30 120,26 130,28 C118,34 108,38 104,44 Z" fill="#26c6da" opacity="0.78"/>
-        <ellipse cx="75" cy="42" rx="22" ry="10" fill="#0097a7"/>
-        <ellipse cx="95" cy="30" rx="11" ry="10" fill="#0097a7"/>
-        <path d="M56,46 C42,54 28,66 14,82" stroke="#0097a7" stroke-width="5" fill="none" stroke-linecap="round"/>
-        <path d="M58,44 C46,38 32,28 16,14" stroke="#0097a7" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <g transform="translate(20,150) scale(0.65) rotate(-6,65,48)">
+        <ellipse cx="66" cy="52" rx="40" ry="27" fill="#e6b378"/>
+        <ellipse cx="66" cy="52" rx="40" ry="27" fill="none" stroke="#c98a4b" stroke-width="2"/>
+        <path d="M46,34 Q66,20 86,34 Q66,30 46,34 Z" fill="#fff3d1"/>
+        <rect x="55" y="20" width="22" height="11" rx="4" fill="#ffd54f"/>
+        <circle cx="52" cy="57" r="3.4" fill="#3e2723"/>
+        <circle cx="80" cy="57" r="3.4" fill="#3e2723"/>
+        <circle cx="44" cy="65" r="5" fill="#ffab91" opacity="0.5"/>
+        <circle cx="88" cy="65" r="5" fill="#ffab91" opacity="0.5"/>
+        <path d="M58,66 Q66,71 74,66" stroke="#8d5524" stroke-width="2" fill="none" stroke-linecap="round"/>
       </g>
     </g>
 
-    <!-- 小燕④：右端上 scale=0.5, x=310, y=40 -->
+    <!-- 小④：右端上 scale=0.5, x=310, y=40 -->
     <g class="sw-a4" style="transform-origin:348px 72px">
-      <g transform="translate(310,40) scale(0.5) rotate(-18,75,42)">
-        <path d="M75,32 C58,16 35,6 6,2 C22,16 32,26 34,38 C24,28 12,22 0,24 C14,32 28,36 34,44 Z" fill="#4dd0e1" opacity="0.72"/>
-        <path d="M75,32 C90,18 108,10 128,8 C114,20 106,28 104,38 C112,30 120,26 130,28 C118,34 108,38 104,44 Z" fill="#4dd0e1" opacity="0.72"/>
-        <ellipse cx="75" cy="42" rx="22" ry="10" fill="#00838f"/>
-        <ellipse cx="95" cy="30" rx="11" ry="10" fill="#00838f"/>
-        <path d="M56,46 C42,54 28,66 14,82" stroke="#00838f" stroke-width="5" fill="none" stroke-linecap="round"/>
-        <path d="M58,44 C46,38 32,28 16,14" stroke="#00838f" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <g transform="translate(310,40) scale(0.5) rotate(8,65,48)">
+        <ellipse cx="66" cy="52" rx="40" ry="27" fill="#dd9e5f"/>
+        <ellipse cx="66" cy="52" rx="40" ry="27" fill="none" stroke="#b87a3e" stroke-width="2"/>
+        <path d="M46,34 Q66,20 86,34 Q66,30 46,34 Z" fill="#fff3d1"/>
+        <rect x="55" y="20" width="22" height="11" rx="4" fill="#ffca28"/>
+        <circle cx="52" cy="57" r="3.4" fill="#3e2723"/>
+        <circle cx="80" cy="57" r="3.4" fill="#3e2723"/>
+        <circle cx="44" cy="65" r="5" fill="#ffab91" opacity="0.5"/>
+        <circle cx="88" cy="65" r="5" fill="#ffab91" opacity="0.5"/>
+        <path d="M58,66 Q66,71 74,66" stroke="#8d5524" stroke-width="2" fill="none" stroke-linecap="round"/>
       </g>
     </g>
 
-    <!-- 極小燕⑤：中央右上 scale=0.38, x=260, y=20 -->
+    <!-- 極小⑤：中央右上 scale=0.38, x=260, y=20 -->
     <g class="sw-a5" style="transform-origin:289px 40px">
-      <g transform="translate(260,20) scale(0.38) rotate(-5,75,42)">
-        <path d="M75,32 C58,16 35,6 6,2 C22,16 32,26 34,38 C24,28 12,22 0,24 C14,32 28,36 34,44 Z" fill="#00acc1" opacity="0.62"/>
-        <path d="M75,32 C90,18 108,10 128,8 C114,20 106,28 104,38 C112,30 120,26 130,28 C118,34 108,38 104,44 Z" fill="#00acc1" opacity="0.62"/>
-        <ellipse cx="75" cy="42" rx="22" ry="10" fill="#00838f"/>
-        <ellipse cx="95" cy="30" rx="11" ry="10" fill="#00838f"/>
-        <path d="M56,46 C42,54 28,66 14,82" stroke="#00838f" stroke-width="5" fill="none" stroke-linecap="round"/>
-        <path d="M58,44 C46,38 32,28 16,14" stroke="#00838f" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <g transform="translate(260,20) scale(0.38) rotate(-3,65,48)">
+        <ellipse cx="66" cy="52" rx="40" ry="27" fill="#e0a868"/>
+        <ellipse cx="66" cy="52" rx="40" ry="27" fill="none" stroke="#c98a4b" stroke-width="2"/>
+        <path d="M46,34 Q66,20 86,34 Q66,30 46,34 Z" fill="#fff3d1"/>
+        <rect x="55" y="20" width="22" height="11" rx="4" fill="#ffd54f"/>
+        <circle cx="52" cy="57" r="3.4" fill="#3e2723"/>
+        <circle cx="80" cy="57" r="3.4" fill="#3e2723"/>
+        <circle cx="44" cy="65" r="5" fill="#ffab91" opacity="0.5"/>
+        <circle cx="88" cy="65" r="5" fill="#ffab91" opacity="0.5"/>
+        <path d="M58,66 Q66,71 74,66" stroke="#8d5524" stroke-width="2" fill="none" stroke-linecap="round"/>
       </g>
     </g>
   </svg>
