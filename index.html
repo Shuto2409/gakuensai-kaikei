@@ -1103,8 +1103,32 @@ async function _refreshTree(){
   const {data,error}=await _sb.from('kv_store').select('value').eq('id',1).single();
   if(!error&&data){ _treeCache=data.value||{}; _notifyAll(); }
 }
+function _showFatal(msg){
+  let b=document.getElementById('fatal-banner');
+  if(!b){ b=document.createElement('div'); b.id='fatal-banner';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#991b1b;color:#fff;padding:12px 16px;font-size:13px;font-weight:700;line-height:1.6;';
+    document.body.appendChild(b); }
+  b.textContent=msg;
+}
+async function _healthCheck(){
+  const r=await _sb.rpc('kv_get_path',{p:['_health']});
+  if(r.error){
+    _showFatal('⚠️ データベースの準備ができていません。SupabaseのSQL Editorで、最新のセットアップSQLを実行してください。（'+r.error.message+'）');
+    return false;
+  }
+  const t=await _sb.rpc('kv_set_path',{p:['_health','a','b'],val:1});
+  const g=await _sb.rpc('kv_get_path',{p:['_health','a','b']});
+  await _sb.rpc('kv_remove_path',{p:['_health']});
+  if(t.error||g.data!==1){
+    _showFatal('⚠️ データベース関数が古いままです。最新のセットアップSQLをもう一度実行してください（途中の階層を作れない古い版です）。');
+    return false;
+  }
+  return true;
+}
 async function _initTree(){
   const {data,error}=await _sb.from('kv_store').select('value').eq('id',1).single();
+  if(error){ _showFatal('⚠️ Supabaseに接続できません: '+error.message); }
+  else { await _healthCheck(); }
   _treeCache=(!error&&data&&data.value)?data.value:{};
   _treeLoaded=true;
   _treeLoadedResolvers.forEach(r=>r()); _treeLoadedResolvers=[];
@@ -1184,6 +1208,10 @@ function _makeRef(path){
   };
 }
 const db={ ref(path){ return _makeRef(path); } };
+
+window.addEventListener('unhandledrejection',e=>{
+  try{ showToast('エラー: '+((e.reason&&e.reason.message)||e.reason),'error'); }catch(_){}
+});
 
 //  STATE
 const S={
