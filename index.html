@@ -918,12 +918,14 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
     <button class="admin-tab-btn active" onclick="switchAdminTab('settings')" id="atab-settings">⚙️ 設定</button>
     <button class="admin-tab-btn" onclick="switchAdminTab('sales')" id="atab-sales">📊 売上</button>
     <button class="admin-tab-btn" onclick="switchAdminTab('tickets')" id="atab-tickets">🎫 整理券</button>
+    <button class="admin-tab-btn" onclick="switchAdminTab('vouchers')" id="atab-vouchers">🎟️ バザー券</button>
     <button class="admin-tab-btn" onclick="switchAdminTab('shifts')" id="atab-shifts">👥 シフト</button>
   </div>
   <div class="admin-body">
     <div class="admin-tab-content active" id="acontent-settings"><div id="settings-content"></div></div>
     <div class="admin-tab-content" id="acontent-sales"><div id="sales-content"></div></div>
     <div class="admin-tab-content" id="acontent-tickets"></div>
+    <div class="admin-tab-content" id="acontent-vouchers"></div>
     <div class="admin-tab-content" id="acontent-shifts"><div id="shifts-content"></div></div>
   </div>
 </div>
@@ -934,7 +936,18 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
     <h2>💳 お会計</h2>
     <div class="pay-items-list" id="pay-items"></div>
     <div class="pay-total-box"><div class="pay-total-label">お支払い合計</div><div class="pay-total-amount" id="pay-total">¥0</div></div>
-    <div class="form-group"><label>お預かり金額</label><input type="number" id="cash-input" placeholder="0" oninput="calcChange()" min="0"></div>
+
+    <!-- バザー券 -->
+    <div id="voucher-group" style="display:none;border:2px solid #fbcfe8;border-radius:14px;overflow:hidden;margin-bottom:14px;">
+      <div style="background:#fdf2f8;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:13px;font-weight:800;color:#9d174d;">🎫 バザー券（1枚 ¥100）</div>
+        <div style="font-size:12px;font-weight:700;color:#9d174d;" id="voucher-total-label">合計 ¥0</div>
+      </div>
+      <div style="padding:10px 12px;background:white;" id="voucher-color-list"></div>
+      <div id="voucher-warning" style="display:none;background:#fef2f2;color:#b91c1c;font-size:12px;font-weight:700;padding:8px 14px;line-height:1.6;">⚠️ バザー券が商品代金を超えています。超えた分はお返しできません。会計前にお客様へ「¥<span id="voucher-over-amount">0</span>分は返金できませんがよろしいですか？」とご確認ください。</div>
+    </div>
+
+    <div class="form-group"><label id="cash-input-label">お預かり金額</label><input type="number" id="cash-input" placeholder="0" oninput="calcChange()" min="0"></div>
     <div class="quick-cash-btns" id="quick-cash-btns"></div>
     <div class="change-box" id="change-display"><div class="change-label">お釣り</div><div class="change-amount" id="change-amount">¥0</div></div>
     <!-- 整理券割当 -->
@@ -1217,7 +1230,7 @@ window.addEventListener('unhandledrejection',e=>{
 const S={
   cart:[],isDayOpen:false,currentDay:null,
   menu:{},settings:{adminPin:'0000',storeName:'じゃがバター屋'},
-  ordersSnap:{},daysSnap:{},ticketsSnap:{},shiftsSnap:{},membersSnap:{},gradeColors:{},editingShiftId:null,shiftViewDate:(()=>{const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`})(),
+  ordersSnap:{},daysSnap:{},ticketsSnap:{},voucherColorsSnap:{},voucherInput:{},shiftsSnap:{},membersSnap:{},gradeColors:{},editingShiftId:null,shiftViewDate:(()=>{const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`})(),
   pinBuf:'',pinCb:null,editingMenuId:null,selCat:'all',
   kitchenFilter:'pending',activeAdminTab:'settings',activePosTab:'menu',
   currentRole:null, // 'cashier'|'kitchen'|'admin'
@@ -1589,6 +1602,10 @@ function setupListeners(){
     if(S.currentRole==='kitchen') renderKitchenTickets();
     if(S.currentRole==='admin'&&S.activeAdminTab==='tickets') renderAdminTickets();
   });
+  db.ref(`${ROOT}/voucherColors`).on('value',snap=>{
+    S.voucherColorsSnap=snap.val()||{};
+    if(S.currentRole==='admin'&&S.activeAdminTab==='vouchers') renderAdminVouchers();
+  });
 }
 
 function updateDayStatusBadges(){
@@ -1791,6 +1808,62 @@ function renderCart(){
 }
 
 //  PAYMENT
+function voucherTotalYen(){
+  return Object.values(S.voucherInput||{}).reduce((s,n)=>s+(n||0),0)*VOUCHER_FACE_VALUE;
+}
+function renderQuickCashBtns(cashNeeded){
+  const qb=document.getElementById('quick-cash-btns');
+  qb.innerHTML='';
+  const amounts=[500,1000,2000,5000,10000].filter(a=>a>=cashNeeded);
+  if(cashNeeded===0||!amounts.includes(cashNeeded))amounts.unshift(cashNeeded);
+  amounts.slice(0,6).forEach(a=>{
+    const btn=document.createElement('button');
+    btn.className='qc-btn';
+    btn.textContent=a===cashNeeded?`ちょうど ¥${a.toLocaleString()}`:`¥${a.toLocaleString()}`;
+    btn.onclick=()=>{document.getElementById('cash-input').value=a;calcChange();};
+    qb.appendChild(btn);
+  });
+}
+function renderVoucherGroup(){
+  const group=document.getElementById('voucher-group');
+  const list=document.getElementById('voucher-color-list');
+  if(!group) return;
+  const colors=Object.entries(S.voucherColorsSnap||{}).sort((a,b)=>(a[1].order||0)-(b[1].order||0));
+  if(colors.length===0){ group.style.display='none'; return; }
+  group.style.display='block';
+  list.innerHTML=colors.map(([id,c])=>{
+    const n=S.voucherInput[id]||0;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 2px;">
+      <span style="width:16px;height:16px;border-radius:50%;background:${esc(c.hex)};display:inline-block;border:1px solid rgba(0,0,0,.15);flex-shrink:0;"></span>
+      <span style="flex:1;font-size:13.5px;font-weight:700;">${esc(c.label)}</span>
+      <span class="qty-controls">
+        <button type="button" class="qty-btn qty-minus" onclick="changeVoucherQty('${id}',-1)">−</button>
+        <span class="qty-num">${n}</span>
+        <button type="button" class="qty-btn qty-plus" onclick="changeVoucherQty('${id}',1)">＋</button>
+      </span>
+    </div>`;
+  }).join('');
+  updateVoucherTotals();
+}
+function changeVoucherQty(id,delta){
+  const n=(S.voucherInput[id]||0)+delta;
+  S.voucherInput[id]=Math.max(0,n);
+  renderVoucherGroup();
+  calcChange();
+}
+function updateVoucherTotals(){
+  const vt=voucherTotalYen();
+  const lbl=document.getElementById('voucher-total-label');
+  if(lbl) lbl.textContent=`合計 ¥${vt.toLocaleString()}`;
+  const total=S.cart.reduce((s,i)=>s+(Number(i.price)||0)*i.qty,0);
+  const warn=document.getElementById('voucher-warning');
+  if(warn){
+    warn.style.display = vt>total ? 'block':'none';
+    const overEl=document.getElementById('voucher-over-amount');
+    if(overEl) overEl.textContent=(vt-total).toLocaleString();
+  }
+  renderQuickCashBtns(Math.max(0,total-vt));
+}
 function showPaymentModal(){
   if(!S.cart.length) return;
   const total=S.cart.reduce((s,i)=>s+(Number(i.price)||0)*i.qty,0);
@@ -1799,18 +1872,11 @@ function showPaymentModal(){
     return `<div class="pay-item-row"><span>${esc(i.name)}${ch} × ${i.qty}</span><span style="font-weight:700;">¥${(i.price*i.qty).toLocaleString()}</span></div>`;
   }).join('');
   document.getElementById('pay-total').textContent=`¥${total.toLocaleString()}`;
-  const qb=document.getElementById('quick-cash-btns');
-  qb.innerHTML='';
-  const amounts=[500,1000,2000,5000,10000].filter(a=>a>=total);
-  if(!amounts.includes(total))amounts.unshift(total);
-  amounts.slice(0,6).forEach(a=>{
-    const btn=document.createElement('button');
-    btn.className='qc-btn';
-    btn.textContent=a===total?`ちょうど ¥${a.toLocaleString()}`:`¥${a.toLocaleString()}`;
-    btn.onclick=()=>{document.getElementById('cash-input').value=a;calcChange();};
-    qb.appendChild(btn);
-  });
+  S.voucherInput={};
+  renderVoucherGroup();
+  renderQuickCashBtns(total);
   document.getElementById('cash-input').value='';
+  document.getElementById('cash-input-label').textContent='お預かり金額';
   document.getElementById('change-display').style.display='none';
   document.getElementById('confirm-pay-btn').disabled=true;
   // 整理券ボタン（全番号表示・使用中は薄く）
@@ -1882,19 +1948,37 @@ function clearTicketNum(){
 
 function calcChange(){
   const total=S.cart.reduce((s,i)=>s+(Number(i.price)||0)*i.qty,0);
+  const vt=voucherTotalYen();
+  const cashNeeded=Math.max(0,total-vt);
   const cash=parseInt(document.getElementById('cash-input').value)||0;
   const cd=document.getElementById('change-display');
   const cb=document.getElementById('confirm-pay-btn');
-  if(cash>=total){
-    document.getElementById('change-amount').textContent=`¥${(cash-total).toLocaleString()}`;
+  document.getElementById('cash-input-label').textContent = vt>0 ? `現金でのお預かり金額（残り ¥${cashNeeded.toLocaleString()}）` : 'お預かり金額';
+  if(vt>total){
+    // バザー券だけで足りている（超過あり）。現金は不要なので、お客様へ確認のうえ確定できる。
+    document.getElementById('change-amount').textContent='¥0';
+    cd.style.display='block';cb.disabled=false;
+    return;
+  }
+  if(cash>=cashNeeded){
+    document.getElementById('change-amount').textContent=`¥${(cash-cashNeeded).toLocaleString()}`;
     cd.style.display='block';cb.disabled=false;
   }else{cd.style.display='none';cb.disabled=true;}
 }
 
 async function confirmPayment(){
   const total=S.cart.reduce((s,i)=>s+(Number(i.price)||0)*i.qty,0);
+  const vt=voucherTotalYen();
+  if(vt>total){
+    const over=vt-total;
+    const proceed=confirm(`バザー券が商品代金より ¥${over.toLocaleString()} 多いです。この分はお返しできません。\n\nお客様に確認しましたか？よろしければOKを押してください。`);
+    if(!proceed) return;
+  }
+  const cashNeeded=Math.max(0,total-vt);
   const cash=parseInt(document.getElementById('cash-input').value)||0;
-  const change=cash-total;
+  const change=cash-cashNeeded;
+  const vouchersUsed={};
+  Object.entries(S.voucherInput||{}).forEach(([id,n])=>{ if(n>0) vouchersUsed[id]=n; });
   // 整理券番号取得
   const ticketNumRaw=parseInt(document.getElementById('ticket-num-input')?.value);
   const ticketNum=isNaN(ticketNumRaw)?null:ticketNumRaw;
@@ -1907,6 +1991,7 @@ async function confirmPayment(){
     items:S.cart.map(i=>({id:i.id,name:i.name,price:i.price,qty:i.qty,...(i.choices?{choices:i.choices}:{})})),
     total,payment:cash,change,status:'pending',
     ticketNum:ticketNum,
+    vouchers:vouchersUsed,voucherTotal:vt,
   };
   showLoading(true);
   try{
@@ -2268,6 +2353,88 @@ async function deleteTicket(id){
   showToast('整理券を削除しました');
 }
 
+//  ADMIN: バザー券（色）管理
+const VOUCHER_FACE_VALUE=100;
+const VOUCHER_DEFAULT_COLORS=[
+  {label:'赤',hex:'#ef4444'},{label:'青',hex:'#3b82f6'},{label:'黄',hex:'#eab308'},
+  {label:'緑',hex:'#22c55e'},{label:'紫',hex:'#a855f7'},{label:'桃',hex:'#ec4899'},{label:'橙',hex:'#f97316'}
+];
+function renderAdminVouchers(){
+  const el=document.getElementById('acontent-vouchers');
+  if(!el) return;
+  const colors=Object.entries(S.voucherColorsSnap||{}).sort((a,b)=>(a[1].order||0)-(b[1].order||0));
+  let html=`<div class="card">
+    <div class="sec-hdr"><h3>🎟️ バザー券の色</h3></div>
+    <p style="font-size:12px;color:var(--gray);margin:-6px 0 12px;">1枚 ¥${VOUCHER_FACE_VALUE} 分として会計で使えます。色を登録しておくと、会計画面で色ごとに枚数を入力できるようになります。</p>`;
+  if(colors.length===0){
+    html+=`<div class="empty-state"><div class="icon">🎟️</div><p>まだ色が登録されていません</p></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="addDefaultVoucherColors()">✨ よく使う7色をまとめて登録</button>`;
+  }else{
+    html+=`<div style="display:flex;flex-direction:column;gap:8px;">`;
+    colors.forEach(([id,c])=>{
+      html+=`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;">
+        <div style="width:22px;height:22px;border-radius:50%;background:${esc(c.hex)};border:1.5px solid rgba(0,0,0,.15);flex-shrink:0;"></div>
+        <div style="flex:1;font-weight:700;font-size:14px;">${esc(c.label)}</div>
+        <button class="btn btn-danger" style="padding:5px 10px;font-size:12px;" onclick="deleteVoucherColor('${id}')">🗑️</button>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  html+=`
+    <div style="display:flex;gap:8px;margin-top:14px;align-items:center;">
+      <input type="text" id="vc-label" placeholder="色の名前（例：黄）" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;">
+      <input type="color" id="vc-hex" value="#ef4444" style="width:44px;height:36px;border:none;border-radius:8px;cursor:pointer;padding:0;">
+      <button class="btn btn-primary" onclick="addVoucherColor()">＋ 追加</button>
+    </div>
+  </div>`;
+
+  // 本日の集計（精算用）
+  const dayOrders=S.isDayOpen&&S.currentDay?Object.values(S.ordersSnap||{}).filter(o=>o.dayId===S.currentDay.id):[];
+  const totals={};
+  dayOrders.forEach(o=>Object.entries(o.vouchers||{}).forEach(([cid,n])=>{ totals[cid]=(totals[cid]||0)+n; }));
+  html+=`<div class="card"><h3>📊 本日のバザー券集計</h3>`;
+  const anyVoucher=Object.keys(totals).length>0;
+  if(!anyVoucher){
+    html+=`<div class="empty-state"><div class="icon">🎟️</div><p>本日はまだバザー券の利用がありません</p></div>`;
+  }else{
+    html+=`<div class="table-wrap"><table class="data-table"><thead><tr><th>色</th><th>枚数</th><th>金額</th></tr></thead><tbody>`;
+    let grandCount=0;
+    colors.forEach(([id,c])=>{
+      const n=totals[id]||0;
+      if(n===0) return;
+      grandCount+=n;
+      html+=`<tr><td><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:14px;height:14px;border-radius:50%;background:${esc(c.hex)};display:inline-block;border:1px solid rgba(0,0,0,.15);"></span>${esc(c.label)}</span></td><td>${n} 枚</td><td>¥${(n*VOUCHER_FACE_VALUE).toLocaleString()}</td></tr>`;
+    });
+    html+=`<tr style="font-weight:800;"><td>合計</td><td>${grandCount} 枚</td><td>¥${(grandCount*VOUCHER_FACE_VALUE).toLocaleString()}</td></tr>`;
+    html+=`</tbody></table></div>`;
+  }
+  html+=`</div>`;
+  el.innerHTML=html;
+}
+async function addVoucherColor(){
+  const label=(document.getElementById('vc-label').value||'').trim();
+  const hex=document.getElementById('vc-hex').value||'#ef4444';
+  if(!label){showToast('色の名前を入力してください','error');return;}
+  const id=Date.now();
+  const order=Object.keys(S.voucherColorsSnap||{}).length;
+  await db.ref(`${ROOT}/voucherColors/${id}`).set({id,label,hex,order});
+  showToast(`「${label}」を追加しました`,'success');
+}
+async function addDefaultVoucherColors(){
+  const updates={};
+  VOUCHER_DEFAULT_COLORS.forEach((c,i)=>{
+    const id=Date.now()+i;
+    updates[`${ROOT}/voucherColors/${id}`]={id,label:c.label,hex:c.hex,order:i};
+  });
+  await db.ref('/').update(updates);
+  showToast('7色を登録しました 🎉','success');
+}
+async function deleteVoucherColor(id){
+  if(!confirm('この色を削除しますか？'))return;
+  await db.ref(`${ROOT}/voucherColors/${id}`).remove();
+  showToast('削除しました');
+}
+
 //  DAY MANAGEMENT
 function openDay(){
   const dayCount=Object.keys(S.daysSnap||{}).length;
@@ -2351,6 +2518,7 @@ function renderAdminTab(tab){
   if(tab==='settings') renderSettingsContent();
   if(tab==='sales') renderSalesContent();
   if(tab==='tickets') renderAdminTickets();
+  if(tab==='vouchers') renderAdminVouchers();
   if(tab==='shifts') renderAdminShifts();
 }
 
