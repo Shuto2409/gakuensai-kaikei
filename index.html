@@ -375,6 +375,11 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 .qc-btn{padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;background:white;cursor:pointer;font-size:13px;font-weight:700;transition:all .15s;}
 .qc-btn:hover{background:#dbeafe;border-color:var(--primary);color:var(--primary);}
 .change-box{background:#f0fdf4;border-radius:12px;padding:13px;text-align:center;display:none;border:2px solid #bbf7d0;}
+.change-box.ok{background:#f0fdf4;border-color:#bbf7d0;}
+.change-box.ok .change-amount{color:var(--success);}
+.change-box.short{background:#fef2f2;border-color:#fecaca;}
+.change-box.short .change-label{color:#b91c1c;}
+.change-box.short .change-amount{color:#b91c1c;}
 .change-label{font-size:12px;color:var(--gray);font-weight:700;}
 .change-amount{font-size:30px;font-weight:800;color:var(--success);}
 
@@ -948,8 +953,8 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
     </div>
 
     <div class="form-group"><label id="cash-input-label">お預かり金額</label><input type="number" id="cash-input" placeholder="0" oninput="calcChange()" min="0"></div>
-    <div class="quick-cash-btns" id="quick-cash-btns"></div>
     <div class="change-box" id="change-display"><div class="change-label">お釣り</div><div class="change-amount" id="change-amount">¥0</div></div>
+    <div class="quick-cash-btns" id="quick-cash-btns"></div>
     <!-- 整理券割当 -->
     <div id="ticket-assign-group" style="display:none;border:2px solid #86efac;border-radius:14px;overflow:hidden;margin-top:14px;">
       <div style="background:#f0fdf4;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
@@ -1877,8 +1882,7 @@ function showPaymentModal(){
   renderQuickCashBtns(total);
   document.getElementById('cash-input').value='';
   document.getElementById('cash-input-label').textContent='お預かり金額';
-  document.getElementById('change-display').style.display='none';
-  document.getElementById('confirm-pay-btn').disabled=true;
+  calcChange();
   // 整理券ボタン（全番号表示・使用中は薄く）
   const allTickets=Object.values(S.ticketsSnap).sort((a,b)=>a.num-b.num);
   const tg=document.getElementById('ticket-assign-group');
@@ -1951,19 +1955,23 @@ function calcChange(){
   const vt=voucherTotalYen();
   const cashNeeded=Math.max(0,total-vt);
   const cash=parseInt(document.getElementById('cash-input').value)||0;
+  const diff=cash-cashNeeded;
   const cd=document.getElementById('change-display');
   const cb=document.getElementById('confirm-pay-btn');
   document.getElementById('cash-input-label').textContent = vt>0 ? `現金でのお預かり金額（残り ¥${cashNeeded.toLocaleString()}）` : 'お預かり金額';
-  if(vt>total){
-    // バザー券だけで足りている（超過あり）。現金は不要なので、お客様へ確認のうえ確定できる。
-    document.getElementById('change-amount').textContent='¥0';
-    cd.style.display='block';cb.disabled=false;
-    return;
+  cd.style.display='block';
+  const labelEl=cd.querySelector('.change-label');
+  const amtEl=document.getElementById('change-amount');
+  if(diff<0){
+    cd.className='change-box short';
+    if(labelEl) labelEl.textContent='不足';
+    amtEl.textContent=`-¥${Math.abs(diff).toLocaleString()}`;
+  } else {
+    cd.className='change-box ok';
+    if(labelEl) labelEl.textContent='お釣り';
+    amtEl.textContent=`¥${diff.toLocaleString()}`;
   }
-  if(cash>=cashNeeded){
-    document.getElementById('change-amount').textContent=`¥${(cash-cashNeeded).toLocaleString()}`;
-    cd.style.display='block';cb.disabled=false;
-  }else{cd.style.display='none';cb.disabled=true;}
+  cb.disabled = diff<0;
 }
 
 async function confirmPayment(){
