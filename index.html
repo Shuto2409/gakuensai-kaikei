@@ -2592,6 +2592,7 @@ function renderSettingsContent(){
         <button class="btn btn-success" onclick="exportExcel()">📊 Excel出力</button>
         <button class="btn btn-ghost" onclick="exportCsv()">📄 CSV出力</button>
         <button class="btn btn-ghost" onclick="exportData()">💾 JSON出力</button>
+        <button class="btn btn-warning" onclick="confirmResetSalesOnly()">🧹 営業実績だけ消去</button>
         <button class="btn btn-danger" onclick="confirmReset()">⚠️ 全データリセット</button>
       </div>
     </div>`;
@@ -3215,8 +3216,27 @@ async function exportCsv(){
   }catch(e){showToast('エクスポートに失敗しました','error');}
   showLoading(false);
 }
+async function confirmResetSalesOnly(){
+  if(!confirm('⚠️ 営業実績（注文・営業日の記録）だけを消去しますか？\n\nメニュー・在庫設定・店舗設定・整理券番号・バザー券の色・シフト・メンバーはそのまま残ります。'))return;
+  if(!confirm('本当に削除しますか？この操作は取り消せません。'))return;
+  showLoading(true);
+  try{
+    await db.ref(`${ROOT}/orders`).remove();
+    await db.ref(`${ROOT}/days`).remove();
+    await db.ref(`${ROOT}/currentDay`).remove();
+    // 整理券は番号ごと消さず、使用状況だけ「空き」に戻す
+    for(const [id,t] of Object.entries(S.ticketsSnap||{})){
+      if(t.status!=='available'){
+        await db.ref(`${ROOT}/tickets/${id}`).update({status:'available',orderId:null});
+      }
+    }
+    S.cart=[];
+    showToast('営業実績を消去しました（メニューなどはそのまま残っています）','success');
+  }catch(e){console.error(e);showToast('エラーが発生しました','error');}
+  showLoading(false);
+}
 async function confirmReset(){
-  if(!confirm('⚠️ Firebaseのすべてのデータをリセットしますか？'))return;
+  if(!confirm('⚠️ すべてのデータ（メニュー・在庫・設定・シフトも含めて）をリセットしますか？'))return;
   if(!confirm('本当に削除しますか？この操作は取り消せません。'))return;
   showLoading(true);
   await db.ref(ROOT).remove();
