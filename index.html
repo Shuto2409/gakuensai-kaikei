@@ -96,6 +96,10 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 .role-card.kitchen-card .rc-title{color:#7c2d12;}
 .role-card.kitchen-card .rc-desc{color:#c2410c;}
 .role-card.kitchen-card:hover:not(.disabled){background:#fed7aa;border-color:#fdba74;box-shadow:0 20px 40px rgba(234,88,12,.3);}
+.role-card.handoff-card{background:#fce7f3;border-color:#fbcfe8;}
+.role-card.handoff-card .rc-title{color:#831843;}
+.role-card.handoff-card .rc-desc{color:#be185d;}
+.role-card.handoff-card:hover:not(.disabled){background:#fbcfe8;border-color:#f9a8d4;box-shadow:0 20px 40px rgba(219,39,119,.3);}
 .role-card.pos-card{background:#ccfbf1;border-color:#99f6e4;}
 .role-card.pos-card .rc-title{color:#134e4a;}
 .role-card.pos-card .rc-desc{color:#0f766e;}
@@ -108,6 +112,7 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 .role-card::after{content:'';position:absolute;top:0;left:0;right:0;height:5px;border-radius:20px 20px 0 0;}
 .role-card.cashier-card::after{background:#2563eb;}
 .role-card.kitchen-card::after{background:#ea580c;}
+.role-card.handoff-card::after{background:#db2777;}
 .role-card.pos-card::after{background:#0d9488;}
 .role-card.admin-card::after{background:#64748b;}
 .role-closed-notice{margin-top:20px;background:rgba(255,255,255,.06);border-radius:12px;padding:12px 20px;color:rgba(255,255,255,.5);font-size:13px;text-align:center;border:1px solid rgba(255,255,255,.1);}
@@ -116,6 +121,7 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 /* ===================== COMMON HEADER ===================== */
 .app-header{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 4px 16px rgba(37,99,235,.35);}
 .app-header.kitchen-header{background:linear-gradient(135deg,#7c3aed,#6d28d9);}
+.app-header.handoff-header{background:linear-gradient(135deg,#db2777,#be185d);}
 .app-header.admin-header{background:linear-gradient(135deg,#374151,#1f2937);}
 .header-back{background:rgba(255,255,255,.2);border:none;color:white;padding:7px 12px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;}
 .header-back:hover{background:rgba(255,255,255,.35);}
@@ -771,6 +777,11 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
       <div class="rc-title">調理</div>
       <div class="rc-desc">注文を確認して料理を作る</div>
     </div>
+    <div class="role-card handoff-card" id="role-handoff" onclick="enterHandoff()">
+      <div class="rc-icon">🛎️</div>
+      <div class="rc-title">受け渡し</div>
+      <div class="rc-desc">できあがった商品をお客様へ渡す</div>
+    </div>
     <div class="role-card pos-card" id="role-pos" onclick="enterPos()">
       <div class="rc-icon">📋</div>
       <div class="rc-title">POS管理</div>
@@ -879,6 +890,51 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
     <div class="co-icon">🔒</div>
     <h2>現在クローズ中です</h2>
     <p>管理者がオープンすると注文が表示されます</p>
+    <button class="co-back-btn" onclick="backToRole()">← スタート画面に戻る</button>
+  </div>
+</div>
+
+<!-- ============ HANDOFF SCREEN ============ -->
+<div id="handoff-screen">
+  <div class="app-header handoff-header">
+    <button class="header-back" onclick="backToRole()">← 戻る</button>
+    <div class="header-info">
+      <div class="header-title">🛎️ 受け渡し</div>
+      <div class="header-sub">
+        <span class="conn-dot" id="handoff-conn-dot"></span>
+        <span id="handoff-conn-label">同期中</span>
+      </div>
+    </div>
+    <div id="day-status-handoff" class="status-open">営業中</div>
+  </div>
+  <div class="kitchen-body">
+    <div class="kitchen-layout">
+      <div class="kitchen-main">
+        <div class="kitchen-toolbar">
+          <h2 id="handoff-title">お渡し待ちの注文</h2>
+          <div class="kitchen-stats" id="handoff-stats"></div>
+        </div>
+        <div id="handoff-grid"></div>
+      </div>
+      <div class="kitchen-side">
+        <!-- 呼び出し中の整理券 -->
+        <div class="kitchen-side-box">
+          <div class="kitchen-side-header">🎫 呼び出し中の整理券</div>
+          <div id="handoff-ticket-panel"><div class="kt-empty">呼び出し中の整理券はありません</div></div>
+        </div>
+        <!-- 受け渡し完了フィード -->
+        <div class="kitchen-side-box">
+          <div class="kitchen-side-header">✅ 受け渡し完了</div>
+          <div id="handoff-done-feed"><div class="done-feed-empty">まだ受け渡し完了した注文はありません</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- closed overlay for handoff -->
+  <div class="closed-overlay" id="handoff-closed">
+    <div class="co-icon">🔒</div>
+    <h2>現在クローズ中です</h2>
+    <p>管理者がオープンするとお渡し待ちの注文が表示されます</p>
     <button class="co-back-btn" onclick="backToRole()">← スタート画面に戻る</button>
   </div>
 </div>
@@ -1248,7 +1304,7 @@ function downloadShareFile(){
 
 //  SCREEN MANAGEMENT
 function showScreen(name){
-  ['setup-screen','share-screen','role-screen','cashier-screen','kitchen-screen','pos-screen','admin-screen']
+  ['setup-screen','share-screen','role-screen','cashier-screen','kitchen-screen','handoff-screen','pos-screen','admin-screen']
     .forEach(id=>{
       const el=document.getElementById(id);
       if(id==='setup-screen'||id==='share-screen'){
@@ -1283,6 +1339,12 @@ function showScreen(name){
     updateKitchenOverlay();
     renderKitchen();
     renderKitchenTickets();
+  } else if(name==='handoff'){
+    document.getElementById('handoff-screen').style.display='block';
+    document.getElementById('handoff-screen').classList.add('show');
+    updateHandoffOverlay();
+    renderHandoff();
+    renderHandoffTickets();
   } else if(name==='pos'){
     document.getElementById('pos-screen').style.display='block';
     document.getElementById('pos-screen').classList.add('show');
@@ -1302,18 +1364,21 @@ function updateRoleScreen(){
   const notice=document.getElementById('role-closed-notice');
   const cashierCard=document.getElementById('role-cashier');
   const kitchenCard=document.getElementById('role-kitchen');
+  const handoffCard=document.getElementById('role-handoff');
   sn.textContent=S.settings.storeName||'じゃがバター屋';
   if(S.isDayOpen && S.currentDay){
     badge.textContent=`Day ${S.currentDay.dayNumber} 営業中 ✅`;
     badge.className='role-day-badge role-day-open';
     cashierCard.classList.remove('disabled');
     kitchenCard.classList.remove('disabled');
+    handoffCard.classList.remove('disabled');
     notice.style.display='none';
   } else {
     badge.textContent='クローズ中';
     badge.className='role-day-badge role-day-closed';
     cashierCard.classList.add('disabled');
     kitchenCard.classList.add('disabled');
+    handoffCard.classList.add('disabled');
     notice.style.display='block';
   }
 }
@@ -1328,6 +1393,12 @@ function enterKitchen(){
   if(!S.isDayOpen){showToast('まだオープンしていません','warning');return;}
   S.currentRole='kitchen';
   showScreen('kitchen');
+}
+
+function enterHandoff(){
+  if(!S.isDayOpen){showToast('まだオープンしていません','warning');return;}
+  S.currentRole='handoff';
+  showScreen('handoff');
 }
 
 function enterPos(){
@@ -1546,7 +1617,7 @@ function setupListeners(){
     const on=snap.val()===true;
     const cls='conn-dot '+(on?'online':'offline');
     const lbl=on?'リアルタイム同期中':'オフライン（再接続待ち）';
-    ['role','cashier','kitchen','pos','admin'].forEach(r=>{
+    ['role','cashier','kitchen','handoff','pos','admin'].forEach(r=>{
       const dot=document.getElementById(r+'-conn-dot');
       const label=document.getElementById(r+'-conn-label');
       if(dot) dot.className=cls;
@@ -1574,13 +1645,16 @@ function setupListeners(){
     if(S.currentRole===null) updateRoleScreen();
     if(S.currentRole==='cashier') updateCashierOverlay();
     if(S.currentRole==='kitchen'){updateKitchenOverlay();renderKitchen();}
+    if(S.currentRole==='handoff'){updateHandoffOverlay();renderHandoff();}
     if(S.currentRole==='admin'){renderAdminTab(S.activeAdminTab);updateAdminDayStatus();}
   });
 
   db.ref(`${ROOT}/orders`).on('value',snap=>{
     S.ordersSnap=snap.val()||{};
     if(S.currentRole==='kitchen') renderKitchen();
+    if(S.currentRole==='handoff') renderHandoff();
     if(S.currentRole==='admin'&&S.activeAdminTab==='sales') renderSalesContent();
+    if(S.currentRole==='admin'&&S.activeAdminTab==='vouchers') renderAdminVouchers();
   });
 
   db.ref(`${ROOT}/days`).on('value',snap=>{
@@ -1605,6 +1679,7 @@ function setupListeners(){
   db.ref(`${ROOT}/tickets`).on('value',snap=>{
     S.ticketsSnap=snap.val()||{};
     if(S.currentRole==='kitchen') renderKitchenTickets();
+    if(S.currentRole==='handoff') renderHandoffTickets();
     if(S.currentRole==='admin'&&S.activeAdminTab==='tickets') renderAdminTickets();
   });
   db.ref(`${ROOT}/voucherColors`).on('value',snap=>{
@@ -1616,7 +1691,7 @@ function setupListeners(){
 function updateDayStatusBadges(){
   const txt=S.isDayOpen && S.currentDay ? `Day ${S.currentDay.dayNumber} 営業中` : 'クローズ中';
   const cls=S.isDayOpen ? 'status-open' : 'status-closed';
-  ['cashier','kitchen'].forEach(r=>{
+  ['cashier','kitchen','handoff'].forEach(r=>{
     const el=document.getElementById(`day-status-${r}`);
     if(el){el.textContent=txt;el.className=cls;}
   });
@@ -1643,6 +1718,11 @@ function updateCashierOverlay(){
 
 function updateKitchenOverlay(){
   const ov=document.getElementById('kitchen-closed');
+  S.isDayOpen ? ov.classList.remove('show') : ov.classList.add('show');
+}
+
+function updateHandoffOverlay(){
+  const ov=document.getElementById('handoff-closed');
   S.isDayOpen ? ov.classList.remove('show') : ov.classList.add('show');
 }
 
@@ -2052,7 +2132,7 @@ async function confirmPayment(){
   showLoading(false);
 }
 
-//  KITCHEN
+//  KITCHEN（調理：未調理 → 調理完了）
 function setKitchenFilter(f){
   S.kitchenFilter=f;
   document.getElementById('kf-pending').classList.toggle('active',f==='pending');
@@ -2060,86 +2140,94 @@ function setKitchenFilter(f){
   renderKitchen();
 }
 
+function renderOrderTicketCard(order,opts){
+  // opts: {isDone, elapsedFromTs, actionLabel, actionFn, doneLabel}
+  const time=new Date(order.timestamp).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  let urgencyClass='done',headerClass='ticket-header';
+  let elapsedHtml='';
+  if(!opts.isDone){
+    const elapsedMs=Date.now()-opts.elapsedFromTs;
+    const elapsedMin=Math.floor(elapsedMs/60000);
+    const elapsedSec=Math.floor((elapsedMs%60000)/1000);
+    const isUrgent=elapsedMin>=5&&elapsedMin<10;
+    const isCritical=elapsedMin>=10;
+    urgencyClass=isCritical?'new critical':isUrgent?'new urgent':'new';
+    headerClass=isCritical?'ticket-header critical-header':isUrgent?'ticket-header urgent-header':'ticket-header';
+    elapsedHtml=`<div class="ticket-elapsed">${isCritical?'🔴':isUrgent?'🟡':'🟢'} <span class="elapsed-display" data-ts="${opts.elapsedFromTs}">${elapsedMin}分${elapsedSec}秒</span></div>`;
+  }
+  const card=document.createElement('div');
+  card.className='order-ticket '+urgencyClass;
+  card.dataset.orderId=order.id;
+  card.innerHTML=`
+    <div class="${headerClass}">
+      <div>
+        <div class="ticket-num"># ${order.orderNum||'?'}</div>
+        ${order.ticketNum!=null?`<div class="ticket-srq-badge">🎫 整理券 No.${order.ticketNum}</div>`:''}
+        ${elapsedHtml}
+      </div>
+      <div class="ticket-time">${time}</div>
+    </div>
+    <div class="ticket-items">
+      ${(order.items||[]).map(item=>`
+        <div class="ticket-item-row">
+          <span class="ticket-item-name">${esc(item.name)}</span>
+          <span class="ticket-item-qty">× ${item.qty}</span>
+        </div>
+        ${item.choices&&item.choices.length>0?`<div style="font-size:11px;color:#7c3aed;padding:0 0 4px 4px;">${item.choices.map(c=>`🔸 ${esc(c.label||c.compLabel||'')}: ${esc(c.name||'')}`).join(' / ')}</div>`:''}
+      `).join('')}
+    </div>
+    <div class="ticket-footer">
+      ${opts.isDone
+        ? `<div class="done-label">${opts.doneLabel}</div>`
+        : `<button class="complete-btn" onclick="${opts.actionFn}(${JSON.stringify(order.id)})">${opts.actionLabel}</button>`
+      }
+    </div>
+  `;
+  return card;
+}
+
 function renderKitchen(){
   const grid=document.getElementById('kitchen-grid');
   if(!grid) return;
-  if(!S.isDayOpen){grid.innerHTML='';renderKitchenDoneFeed([]);return;}
+  if(!S.isDayOpen){grid.innerHTML='';renderDoneFeed('kitchen-done-feed',[],'timestamp');return;}
 
   const dayOrders=Object.values(S.ordersSnap)
     .filter(o=>o.dayId===S.currentDay.id)
     .sort((a,b)=>a.timestamp.localeCompare(b.timestamp));
 
-  const pending=dayOrders.filter(o=>o.status!=='completed');
-  const done=dayOrders.filter(o=>o.status==='completed');
+  const pending=dayOrders.filter(o=>(o.status||'pending')==='pending');
+  const cookedOrLater=dayOrders.filter(o=>o.status==='cooked'||o.status==='completed');
 
-  const pendingCount=pending.length;
   document.getElementById('kitchen-title').textContent=
-    `未完了の注文${pendingCount>0?` (${pendingCount}件)`:''}`;
+    `調理待ちの注文${pending.length>0?` (${pending.length}件)`:''}`;
 
-  // Stats bar
   const statsEl=document.getElementById('kitchen-stats');
   if(statsEl){
     const urgentCount=pending.filter(o=>{const m=Math.floor((Date.now()-new Date(o.timestamp).getTime())/60000);return m>=5&&m<10;}).length;
     const critCount=pending.filter(o=>Math.floor((Date.now()-new Date(o.timestamp).getTime())/60000)>=10).length;
     statsEl.innerHTML=`
-      <div class="k-stat">📋 待機 ${pendingCount}</div>
-      <div class="k-stat">✅ 完了 ${done.length}</div>
+      <div class="k-stat">📋 待機 ${pending.length}</div>
+      <div class="k-stat">🍳 調理完了 ${cookedOrLater.length}</div>
       ${urgentCount>0?`<div class="k-stat urgent">🟡 遅延 ${urgentCount}</div>`:''}
       ${critCount>0?`<div class="k-stat critical">🔴 超過 ${critCount}</div>`:''}
     `;
   }
 
-  // 完了フィードを更新
-  renderKitchenDoneFeed(done);
+  renderDoneFeed('kitchen-done-feed',cookedOrLater,'cookedAt','まだ調理完了した注文はありません','調理完了');
 
-  const filtered=pending;
-
-  if(filtered.length===0){
-    grid.innerHTML=`<div class="kitchen-empty"><div class="icon">✅</div><p>未完了の注文はありません！</p></div>`;
+  if(pending.length===0){
+    grid.innerHTML=`<div class="kitchen-empty"><div class="icon">✅</div><p>調理待ちの注文はありません！</p></div>`;
     return;
   }
 
   grid.innerHTML='';
-  const now=Date.now();
-  filtered.forEach(order=>{
-    const isDone=order.status==='completed';
-    const time=new Date(order.timestamp).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
-    const elapsedMs=now-new Date(order.timestamp).getTime();
-    const elapsedMin=Math.floor(elapsedMs/60000);
-    const elapsedSec=Math.floor((elapsedMs%60000)/1000);
-    const isUrgent=!isDone&&elapsedMin>=5&&elapsedMin<10;
-    const isCritical=!isDone&&elapsedMin>=10;
-    let urgencyClass=isDone?'done':(isCritical?'new critical':isUrgent?'new urgent':'new');
-    let headerClass=isCritical?'ticket-header critical-header':isUrgent?'ticket-header urgent-header':'ticket-header';
-    const elapsedStr=`${elapsedMin}分${elapsedSec}秒`;
-    const card=document.createElement('div');
-    card.className='order-ticket '+urgencyClass;
-    card.dataset.orderId=order.id;
-    card.innerHTML=`
-      <div class="${headerClass}">
-        <div>
-          <div class="ticket-num"># ${order.orderNum||'?'}</div>
-          ${order.ticketNum!=null?`<div class="ticket-srq-badge">🎫 整理券 No.${order.ticketNum}</div>`:''}
-          ${!isDone?`<div class="ticket-elapsed">${isCritical?'🔴':isUrgent?'🟡':'🟢'} <span class="elapsed-display" data-ts="${new Date(order.timestamp).getTime()}">${elapsedStr}</span></div>`:''}
-        </div>
-        <div class="ticket-time">${time}</div>
-      </div>
-      <div class="ticket-items">
-        ${(order.items||[]).map(item=>`
-          <div class="ticket-item-row">
-            <span class="ticket-item-name">${esc(item.name)}</span>
-            <span class="ticket-item-qty">× ${item.qty}</span>
-          </div>
-          ${item.choices&&item.choices.length>0?`<div style="font-size:11px;color:#7c3aed;padding:0 0 4px 4px;">${item.choices.map(c=>`🔸 ${esc(c.label||c.compLabel||'')}: ${esc(c.name||'')}`).join(' / ')}</div>`:''}
-        `).join('')}
-      </div>
-      <div class="ticket-footer">
-        ${isDone
-          ? `<div class="done-label">✅ 完了</div>`
-          : `<button class="complete-btn" onclick="completeOrder(${JSON.stringify(order.id)})">✓ 完了</button>`
-        }
-      </div>
-    `;
+  pending.forEach(order=>{
+    const card=renderOrderTicketCard(order,{
+      isDone:false,
+      elapsedFromTs:new Date(order.timestamp).getTime(),
+      actionLabel:'✓ 調理完了',
+      actionFn:'completeCooking'
+    });
     grid.appendChild(card);
   });
   startElapsedTimer();
@@ -2147,25 +2235,24 @@ function renderKitchen(){
 
 const DONE_FEED_MAX=10;
 
-function renderKitchenDoneFeed(doneOrders){
-  const feed=document.getElementById('kitchen-done-feed');
+function renderDoneFeed(feedId,doneOrders,tsField,emptyText,doneWord){
+  emptyText=emptyText||'まだ完了した注文はありません';
+  doneWord=doneWord||'完了';
+  const feed=document.getElementById(feedId);
   if(!feed) return;
 
-  // 新しい順に並べ、最大10件
   const sorted=[...doneOrders]
-    .sort((a,b)=>b.timestamp.localeCompare(a.timestamp))
+    .sort((a,b)=>(b[tsField]||b.timestamp).localeCompare(a[tsField]||a.timestamp))
     .slice(0,DONE_FEED_MAX);
 
   if(sorted.length===0){
-    feed.innerHTML=`<div class="done-feed-empty">まだ完了した注文はありません</div>`;
+    feed.innerHTML=`<div class="done-feed-empty">${emptyText}</div>`;
     return;
   }
 
-  // 既存アイテムのIDセット
   const existingIds=new Set([...feed.querySelectorAll('.done-feed-item')].map(el=>el.dataset.id));
   const newIds=new Set(sorted.map(o=>String(o.id)));
 
-  // 不要なアイテムを削除アニメーションで消す
   feed.querySelectorAll('.done-feed-item').forEach(el=>{
     if(!newIds.has(el.dataset.id)){
       el.classList.add('removing');
@@ -2173,10 +2260,9 @@ function renderKitchenDoneFeed(doneOrders){
     }
   });
 
-  // 新しいアイテムを先頭に追加
   sorted.forEach(order=>{
     if(!existingIds.has(String(order.id))){
-      const time=new Date(order.completedAt||order.timestamp)
+      const time=new Date(order[tsField]||order.timestamp)
         .toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
       const itemsText=(order.items||[]).map(i=>`${i.name}×${i.qty}`).join('・');
       const el=document.createElement('div');
@@ -2185,9 +2271,8 @@ function renderKitchenDoneFeed(doneOrders){
       el.innerHTML=`
         <div class="done-feed-num"># ${order.orderNum||'?'}</div>
         <div class="done-feed-items">${esc(itemsText)}</div>
-        <div class="done-feed-time">完了 ${time}</div>
+        <div class="done-feed-time">${doneWord} ${time}</div>
       `;
-      // 先頭に挿入
       if(feed.firstChild&&!feed.firstChild.classList?.contains('done-feed-empty')){
         feed.insertBefore(el,feed.firstChild);
       } else {
@@ -2227,40 +2312,120 @@ function startElapsedTimer(){
   },1000);
 }
 
-async function completeOrder(orderId){
+async function completeCooking(orderId){
   const order=S.ordersSnap[orderId];
-  await db.ref(`${ROOT}/orders/${orderId}/status`).set('completed');
-  await db.ref(`${ROOT}/orders/${orderId}/completedAt`).set(new Date().toISOString());
-  // 整理券がある場合は「空き」に戻す（次のお客さんが使えるよう再利用）
+  await db.ref(`${ROOT}/orders/${orderId}/status`).set('cooked');
+  await db.ref(`${ROOT}/orders/${orderId}/cookedAt`).set(new Date().toISOString());
+  // 整理券があれば「呼び出し中」にする（受け渡し待ちの合図）
   if(order?.ticketNum!=null){
     const tk=Object.values(S.ticketsSnap).find(t=>t.num===order.ticketNum);
-    if(tk) await db.ref(`${ROOT}/tickets/${tk.id}`).update({status:'available',orderId:null});
+    if(tk) await db.ref(`${ROOT}/tickets/${tk.id}`).update({status:'called'});
   }
-  showToast('注文を完了しました ✅','success');
+  showToast('調理完了にしました 🍳','success');
 }
 
-//  KITCHEN: 整理券パネル表示
+//  KITCHEN: 整理券パネル表示（調理待ち = in_use のみ）
 function renderKitchenTickets(){
   const panel=document.getElementById('kitchen-ticket-panel');
   if(!panel) return;
   const tickets=Object.values(S.ticketsSnap)
-    .filter(t=>t.status==='in_use'||t.status==='called')
+    .filter(t=>t.status==='in_use')
     .sort((a,b)=>a.num-b.num);
   if(tickets.length===0){
-    panel.innerHTML=`<div class="kt-empty">使用中の整理券はありません</div>`;
+    panel.innerHTML=`<div class="kt-empty">調理待ちの整理券はありません</div>`;
     return;
   }
   panel.innerHTML=tickets.map(t=>{
     const order=t.orderId?S.ordersSnap[t.orderId]:null;
     const orderLabel=order?`注文 #${order.orderNum}`:'' ;
-    const statusLabel=t.status==='called'?'📢 呼び出し中':'🍳 調理中';
     return `<div class="kt-item">
       <div class="kt-num">No.${t.num}</div>
       <div style="flex:1;min-width:0;">
-        <div class="kt-status ${t.status}">${statusLabel}</div>
+        <div class="kt-status in_use">🍳 調理中</div>
         ${orderLabel?`<div style="font-size:11px;color:var(--gray);margin-top:2px;">${orderLabel}</div>`:''}
       </div>
-      <div class="kt-badge ${t.status}">${t.status==='called'?'📢':'🍳'}</div>
+      <div class="kt-badge in_use">🍳</div>
+    </div>`;
+  }).join('');
+}
+
+//  HANDOFF（受け渡し：調理完了 → 受け渡し完了）
+function renderHandoff(){
+  const grid=document.getElementById('handoff-grid');
+  if(!grid) return;
+  if(!S.isDayOpen){grid.innerHTML='';renderDoneFeed('handoff-done-feed',[],'completedAt','まだ受け渡し完了した注文はありません','受け渡し完了');return;}
+
+  const dayOrders=Object.values(S.ordersSnap)
+    .filter(o=>o.dayId===S.currentDay.id)
+    .sort((a,b)=>(a.cookedAt||a.timestamp).localeCompare(b.cookedAt||b.timestamp));
+
+  const waiting=dayOrders.filter(o=>o.status==='cooked');
+  const handedOff=dayOrders.filter(o=>o.status==='completed');
+
+  document.getElementById('handoff-title').textContent=
+    `お渡し待ちの注文${waiting.length>0?` (${waiting.length}件)`:''}`;
+
+  const statsEl=document.getElementById('handoff-stats');
+  if(statsEl){
+    statsEl.innerHTML=`
+      <div class="k-stat">🛎️ お渡し待ち ${waiting.length}</div>
+      <div class="k-stat">✅ 受け渡し完了 ${handedOff.length}</div>
+    `;
+  }
+
+  renderDoneFeed('handoff-done-feed',handedOff,'completedAt','まだ受け渡し完了した注文はありません','受け渡し完了');
+
+  if(waiting.length===0){
+    grid.innerHTML=`<div class="kitchen-empty"><div class="icon">🛎️</div><p>お渡し待ちの注文はありません</p></div>`;
+    return;
+  }
+
+  grid.innerHTML='';
+  waiting.forEach(order=>{
+    const card=renderOrderTicketCard(order,{
+      isDone:false,
+      elapsedFromTs:new Date(order.cookedAt||order.timestamp).getTime(),
+      actionLabel:'✓ 受け渡し完了',
+      actionFn:'completeHandoff'
+    });
+    grid.appendChild(card);
+  });
+  startElapsedTimer();
+}
+
+async function completeHandoff(orderId){
+  const order=S.ordersSnap[orderId];
+  await db.ref(`${ROOT}/orders/${orderId}/status`).set('completed');
+  await db.ref(`${ROOT}/orders/${orderId}/completedAt`).set(new Date().toISOString());
+  // 整理券があれば「空き」に戻す（次のお客さんが使えるよう再利用）
+  if(order?.ticketNum!=null){
+    const tk=Object.values(S.ticketsSnap).find(t=>t.num===order.ticketNum);
+    if(tk) await db.ref(`${ROOT}/tickets/${tk.id}`).update({status:'available',orderId:null});
+  }
+  showToast('受け渡し完了にしました ✅','success');
+}
+
+//  HANDOFF: 呼び出し中の整理券パネル
+function renderHandoffTickets(){
+  const panel=document.getElementById('handoff-ticket-panel');
+  if(!panel) return;
+  const tickets=Object.values(S.ticketsSnap)
+    .filter(t=>t.status==='called')
+    .sort((a,b)=>a.num-b.num);
+  if(tickets.length===0){
+    panel.innerHTML=`<div class="kt-empty">呼び出し中の整理券はありません</div>`;
+    return;
+  }
+  panel.innerHTML=tickets.map(t=>{
+    const order=t.orderId?S.ordersSnap[t.orderId]:null;
+    const orderLabel=order?`注文 #${order.orderNum}`:'' ;
+    return `<div class="kt-item">
+      <div class="kt-num">No.${t.num}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="kt-status called">📢 呼び出し中</div>
+        ${orderLabel?`<div style="font-size:11px;color:var(--gray);margin-top:2px;">${orderLabel}</div>`:''}
+      </div>
+      <div class="kt-badge called">📢</div>
     </div>`;
   }).join('');
 }
@@ -2678,7 +2843,8 @@ function renderSalesContent(){
     html+=`<div class="card"><h3>🧾 本日の取引履歴</h3><div class="table-wrap"><table class="data-table"><thead><tr><th>#</th><th>時刻</th><th>商品</th><th>金額</th><th></th></tr></thead><tbody>`;
     [...todayOrders].sort((a,b)=>b.timestamp.localeCompare(a.timestamp)).forEach(o=>{
       const time=new Date(o.timestamp).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
-      const status=o.status==='completed'?'<span style="color:var(--success);font-size:11px;">✅完了</span>':'<span style="color:var(--warning);font-size:11px;">⏳未完了</span>';
+      const stLabel=o.status==='completed'?['#16a34a','✅ 受渡済']:o.status==='cooked'?['#db2777','🛎️ お渡し待ち']:['var(--warning)','🍳 調理待ち'];
+      const status=`<span style="color:${stLabel[0]};font-size:11px;">${stLabel[1]}</span>`;
       const isCancellable=o.status!=='cancelled';html+=`<tr style="${o.status==='cancelled'?'opacity:.45;':''}"><td>#${o.orderNum||'-'} ${status}</td><td>${time}</td><td style="font-size:12px;">${esc((o.items||[]).map(i=>`${i.name}×${i.qty}`).join('、'))}</td><td style="font-weight:700;">¥${o.total.toLocaleString()}</td><td>${isCancellable?`<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="cancelOrder(${JSON.stringify(o.id)})">🗑️ 取消</button>`:''}</td></tr>`;
     });
     html+=`</tbody></table></div></div>`;
@@ -3165,7 +3331,7 @@ async function exportExcel(){
         dt.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),
         dayNum?`Day ${dayNum}`:'',
         (o.items||[]).map(i=>`${i.name}×${i.qty}`).join(' / '),
-        o.total||0,o.payment||0,o.change||0,o.status==='completed'?'完了':'未完了']);
+        o.total||0,o.payment||0,o.change||0,(o.status==='completed'?'受渡済':o.status==='cooked'?'お渡し待ち':'調理待ち')]);
     });
     const wsTx=XLSX.utils.aoa_to_sheet(txRows);
     wsTx['!cols']=[{wch:10},{wch:14},{wch:12},{wch:10},{wch:40},{wch:12},{wch:12},{wch:10},{wch:8}];
@@ -3204,7 +3370,7 @@ async function exportCsv(){
       const dt=new Date(o.timestamp);
       rows.push([`#${o.orderNum||'-'}`,dt.toLocaleDateString('ja-JP'),
         dt.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),
-        (o.items||[]).map(i=>`${i.name}×${i.qty}`).join(' / '),o.total||0,o.payment||0,o.change||0,o.status==='completed'?'完了':'未完了']);
+        (o.items||[]).map(i=>`${i.name}×${i.qty}`).join(' / '),o.total||0,o.payment||0,o.change||0,(o.status==='completed'?'受渡済':o.status==='cooked'?'お渡し待ち':'調理待ち')]);
     });
     const csv='﻿'+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
