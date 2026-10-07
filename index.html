@@ -541,6 +541,16 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 
 
 /* ---- Gantt chart ---- */
+.shift-mode-toggle{display:flex;gap:6px;margin:8px 0;}
+.shift-mode-toggle button{flex:1;padding:8px;border:1.5px solid var(--border);background:#fff;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;}
+.shift-mode-toggle button.on{background:var(--primary);color:#fff;border-color:var(--primary);}
+.slot-wrap{display:flex;flex-direction:column;gap:4px;}
+.slot-row{display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:#fff;}
+.slot-row.slot-now{outline:2px solid #22c55e;}
+.slot-time{width:48px;font-weight:700;font-size:13px;flex-shrink:0;padding-top:3px;}
+.slot-count{width:34px;font-size:12px;font-weight:700;color:#64748b;flex-shrink:0;padding-top:4px;}
+.slot-chips{display:flex;flex-wrap:wrap;gap:4px;flex:1;}
+.slot-chip{padding:3px 8px;border-radius:999px;font-size:12px;color:#374151;cursor:pointer;}
 .gantt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .gantt-date-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;}
 .gantt-date-nav button{padding:6px 14px;border:1.5px solid var(--border);background:white;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;}
@@ -3495,6 +3505,11 @@ function shiftDateNav(delta){
   renderAdminShifts();
 }
 
+function setShiftViewMode(m){
+  S.shiftViewMode=m;
+  renderAdminShifts();
+}
+
 function renderAdminShifts(){
   const el=document.getElementById('shifts-content');
   if(!el) return;
@@ -3588,6 +3603,28 @@ function renderAdminShifts(){
       </div>`;
     }).join('');
 
+  // ── 時間帯別 ──
+  const _tm=t=>{const [a,b]=(t||'0:0').split(':').map(Number);return a*60+(b||0)};
+  const slotsHtml=(()=>{
+    if(dayEntries.length===0) return `<div class="gantt-empty">この日のシフトはありません</div>`;
+    let rows='';
+    for(let h=GANTT_H_START;h<GANTT_H_END;h++){
+      const a=h*60,b=(h+1)*60;
+      const on=dayEntries.filter(([,sh])=>_tm(sh.startTime)<b&&_tm(sh.endTime)>a)
+        .sort((x,y)=>(parseInt(y[1].grade)||0)-(parseInt(x[1].grade)||0)||(x[1].name||'').localeCompare(y[1].name||'','ja'));
+      const nowCls=isToday&&_tn.getHours()===h?' slot-now':'';
+      const chips=on.length===0?'<span style="color:#94a3b8;font-size:12px;">—</span>':on.map(([sid,sh])=>{
+        const col=getGradeColor(sh.grade||sh.type||'');
+        const partial=_tm(sh.startTime)>a||_tm(sh.endTime)<b;
+        const note=partial?`<small style="opacity:.7;margin-left:3px;">${sh.startTime}〜${sh.endTime}</small>`:'';
+        return `<span class="slot-chip" style="background:${col}55;border:1px solid ${col};" onclick="startEditShift('${sid}')" title="${sh.name} ${sh.startTime}〜${sh.endTime}"><b>${sh.grade||'?'}</b> ${sh.name}${note}</span>`;
+      }).join('');
+      rows+=`<div class="slot-row${nowCls}"><div class="slot-time">${String(h).padStart(2,'0')}:00</div><div class="slot-count">${on.length}人</div><div class="slot-chips">${chips}</div></div>`;
+    }
+    return `<div class="slot-wrap">${rows}</div>`;
+  })();
+  const viewMode=S.shiftViewMode==='slots'?'slots':'gantt';
+
   // ── 学年凡例 ──
   const legendHtml=knownGrades.map(g=>{
     const col=getGradeColor(g);
@@ -3645,7 +3682,11 @@ function renderAdminShifts(){
         <div class="gdlabel">${dateLabel}${isToday?' 🟢 今日':''}</div>
         <button onclick="shiftDateNav(1)">▶</button>
       </div>
-      <div class="gantt-wrap">
+      <div class="shift-mode-toggle">
+        <button class="${viewMode==='gantt'?'on':''}" onclick="setShiftViewMode('gantt')">📊 ガント</button>
+        <button class="${viewMode==='slots'?'on':''}" onclick="setShiftViewMode('slots')">🕐 時間帯別</button>
+      </div>
+      ${viewMode==='slots'?slotsHtml:`<div class="gantt-wrap">
         <div class="gantt-table">
           <div class="gantt-axis-row">
             <div style="width:130px;flex-shrink:0;"></div>
@@ -3654,7 +3695,7 @@ function renderAdminShifts(){
           </div>
           ${rowsHtml}
         </div>
-      </div>
+      </div>`}
     </div>
 
     <!-- シフト追加/編集 -->
