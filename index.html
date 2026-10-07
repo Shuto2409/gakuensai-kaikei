@@ -60,6 +60,19 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 .share-open-btn{width:100%;padding:12px;background:white;border:2px solid var(--success);color:var(--success);border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;}
 
 /* ===================== ROLE SELECT ===================== */
+#login-screen{min-height:100vh;background:linear-gradient(135deg,#0f172a,#1e3a8a,#0e7490);display:none;align-items:center;justify-content:center;padding:20px;}
+#login-screen.show{display:flex;}
+.login-card{background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 10px 40px rgba(0,0,0,.35);}
+.login-card h1{font-size:20px;margin-bottom:4px;color:#0f172a;}
+.login-card p{font-size:12px;color:#64748b;margin-bottom:16px;}
+.login-card input{width:100%;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:16px;margin-bottom:10px;font-family:inherit;}
+.login-card button{width:100%;padding:12px;border:none;border-radius:10px;background:#1d4ed8;color:#fff;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit;}
+#debug-pill{position:fixed;left:10px;bottom:10px;z-index:9999;background:#7c3aed;color:#fff;font-size:12px;font-weight:800;padding:6px 12px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.3);display:none;pointer-events:none;}
+#role-account{margin-top:10px;font-size:12px;font-weight:700;color:#004d40;display:none;align-items:center;justify-content:center;gap:8px;}
+#role-account button{border:1px solid #004d40;background:transparent;color:#004d40;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+.acct-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;}
+.acct-row .acct-type{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:#dbeafe;color:#1e40af;}
+.acct-row .acct-type.debug{background:#ede9fe;color:#6d28d9;}
 #role-screen{min-height:100vh;background:radial-gradient(ellipse at 25% 35%,#c8e600 0%,#a8c800 45%,#88aa00 100%);display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden;}
 #role-screen.show{display:flex;}
 /* 燕・虹のアニメーション */
@@ -654,6 +667,16 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 </div>
 
 <!-- ============ ROLE SELECT ============ -->
+<div id="login-screen">
+  <div class="login-card">
+    <h1>🔐 ログイン</h1>
+    <p>アカウント名とPINを入力してください</p>
+    <input id="login-name" type="text" placeholder="アカウント名" autocomplete="username">
+    <input id="login-pin" type="password" inputmode="numeric" placeholder="PIN" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()">ログイン</button>
+  </div>
+</div>
+<div id="debug-pill">🧪 デバッグモード（本番データとは別）</div>
 <div id="role-screen">
 
   <!-- 燕＆虹 背景SVG -->
@@ -775,6 +798,7 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
       </div>
     </div>
     <div id="role-shift-display"></div>
+    <div id="role-account"><span id="role-account-name"></span><button onclick="doLogout()">ログアウト</button></div>
   </div>
   <div class="role-cards">
     <div class="role-card cashier-card" id="role-cashier" onclick="enterCashier()">
@@ -1153,7 +1177,8 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 const SUPABASE_URL = "https://xwbpulfedlriuayzuxww.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3YnB1bGZlZGxyaXVheXp1eHd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1NTM2OTEsImV4cCI6MjEwNTEyOTY5MX0.XGysaD48oEeNQn9BDgyIYvBFqBTBDULNsVvmORNzr60";
 const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const ROOT='festival';
+const REAL_ROOT='festival', DEBUG_ROOT='debug_data';
+let ROOT=REAL_ROOT;
 
 // --- Firebase-Realtime-Database-compatible shim, backed by a single JSONB
 //     row in Supabase (table kv_store, id=1). All db.ref(path).set/update/
@@ -1165,7 +1190,7 @@ const _connCallbacks=[];
 function _pathToArray(path){
   if(path==='/') return [];
   let p=String(path);
-  if(p.startsWith(ROOT)) p=p.slice(ROOT.length);
+  if(p===REAL_ROOT||p.startsWith(REAL_ROOT+'/')) p=p.slice(REAL_ROOT.length);
   p=p.replace(/^\/+/,'');
   return p===''?[]:p.split('/');
 }
@@ -1314,18 +1339,22 @@ function downloadShareFile(){
 
 //  SCREEN MANAGEMENT
 function showScreen(name){
-  ['setup-screen','share-screen','role-screen','cashier-screen','kitchen-screen','handoff-screen','pos-screen','admin-screen']
+  ['setup-screen','share-screen','login-screen','role-screen','cashier-screen','kitchen-screen','handoff-screen','pos-screen','admin-screen']
     .forEach(id=>{
       const el=document.getElementById(id);
-      if(id==='setup-screen'||id==='share-screen'){
+      if(id==='setup-screen'||id==='share-screen'||id==='login-screen'){
         el.classList.remove('show');
+        if(id==='login-screen') el.style.display='none';
       } else {
         el.classList.remove('show');
         el.style.display='none';
       }
     });
 
-  if(name==='setup'){
+  if(name==='login'){
+    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('login-screen').classList.add('show');
+  } else if(name==='setup'){
     document.getElementById('setup-screen').style.display='flex';
     document.getElementById('setup-screen').classList.add('show');
   } else if(name==='share'){
@@ -2761,6 +2790,7 @@ function renderSettingsContent(){
     });
   }
   html+=`</div></div>
+    ${renderAccountCard()}
     <div class="card">
       <h3>💾 データ管理</h3>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -3415,7 +3445,9 @@ async function confirmReset(){
   if(!confirm('⚠️ すべてのデータ（メニュー・在庫・設定・シフトも含めて）をリセットしますか？'))return;
   if(!confirm('本当に削除しますか？この操作は取り消せません。'))return;
   showLoading(true);
-  await db.ref(ROOT).remove();
+  if(ROOT===REAL_ROOT){
+    for(const k of ['menu','orders','days','currentDay','settings','tickets','voucherColors','shifts','members','gradeColors']) await db.ref(`${ROOT}/${k}`).remove();
+  } else await db.ref(ROOT).remove();
   S.cart=[];
   showLoading(false);
   showToast('データをリセットしました');
@@ -3798,10 +3830,104 @@ function deleteShift(id){
   db.ref(`${ROOT}/shifts/${id}`).remove()
     .then(()=>showToast('削除しました','success'));
 }
+
+//  ACCOUNTS / LOGIN (簡易アカウント。type: 'real'=本番データ / 'debug'=デバッグ用の別データ)
+const LOGIN_KEY='festival_login_v1';
+function getAccounts(){return _getAtPath(_treeCache,['accounts'])||{};}
+function _saveLogin(v){try{if(v)localStorage.setItem(LOGIN_KEY,JSON.stringify(v));else localStorage.removeItem(LOGIN_KEY);}catch(e){}}
+function _loadLogin(){try{return JSON.parse(localStorage.getItem(LOGIN_KEY)||'null');}catch(e){return null;}}
+function enterAccount(id,acc){
+  S.account={id,name:acc.name,type:acc.type==='debug'?'debug':'real'};
+  ROOT=S.account.type==='debug'?DEBUG_ROOT:REAL_ROOT;
+  _saveLogin({id,pin:acc.pin});
+  document.getElementById('debug-pill').style.display=S.account.type==='debug'?'block':'none';
+  const box=document.getElementById('role-account');
+  box.style.display='flex';
+  document.getElementById('role-account-name').textContent='👤 '+acc.name+(S.account.type==='debug'?'（デバッグ）':'');
+  startApp();
+}
+function doLogin(){
+  const name=document.getElementById('login-name').value.trim();
+  const pin=document.getElementById('login-pin').value;
+  const hit=Object.entries(getAccounts()).find(([,a])=>a&&a.name===name&&String(a.pin)===pin);
+  if(!hit){showToast('アカウント名かPINが違います','error');return;}
+  enterAccount(hit[0],hit[1]);
+}
+function doLogout(){_saveLogin(null);location.reload();}
+async function addAccount(){
+  const name=document.getElementById('ac-name').value.trim();
+  const pin=document.getElementById('ac-pin').value.trim();
+  let type=document.getElementById('ac-type').value==='debug'?'debug':'real';
+  const accts=getAccounts();
+  if(!name){showToast('アカウント名を入力してください','error');return;}
+  if(!/^\d{4,}$/.test(pin)){showToast('PINは4桁以上の数字にしてください','error');return;}
+  if(Object.values(accts).some(a=>a&&a.name===name)){showToast('同じ名前のアカウントがあります','error');return;}
+  const first=Object.keys(accts).length===0;
+  if(first) type='real';
+  const id='ac'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  await db.ref(`accounts/${id}`).set({name,pin,type,createdAt:new Date().toISOString()});
+  if(first){
+    _saveLogin({id,pin});
+    S.account={id,name,type:'real'};
+    showToast('最初のアカウントを作成しました。次回からログインが必要です','success');
+  } else showToast('アカウントを追加しました','success');
+  renderSettingsContent();
+}
+async function deleteAccount(id){
+  const accts=getAccounts(), a=accts[id];
+  if(!a) return;
+  const reals=Object.values(accts).filter(x=>x.type!=='debug');
+  if(a.type!=='debug'&&reals.length<=1){showToast('最後の本番アカウントは削除できません','error');return;}
+  if(S.account&&S.account.id===id){showToast('ログイン中のアカウントは削除できません','error');return;}
+  if(!confirm(`アカウント「${a.name}」を削除しますか？`)) return;
+  await db.ref(`accounts/${id}`).remove();
+  renderSettingsContent();
+}
+async function copyRealToDebug(){
+  if(!confirm('本番データをデバッグ用データにコピーします。\n今のデバッグデータは上書きされます。よろしいですか？')) return;
+  showLoading(true);
+  try{
+    const src={};
+    ['menu','orders','days','currentDay','settings','tickets','voucherColors','shifts','members','gradeColors'].forEach(k=>{
+      const v=_getAtPath(_treeCache,[k]); if(v!=null) src[k]=v;
+    });
+    await db.ref(DEBUG_ROOT).remove();
+    if(Object.keys(src).length) await db.ref(DEBUG_ROOT).set(JSON.parse(JSON.stringify(src)));
+    showToast('本番データをコピーしました','success');
+  }catch(e){console.error(e);showToast('コピーに失敗しました','error');}
+  showLoading(false);
+}
+function renderAccountCard(){
+  const accts=Object.entries(getAccounts());
+  const isDebug=S.account&&S.account.type==='debug';
+  if(isDebug){
+    return `<div class="card"><h3>🧪 デバッグデータ</h3>
+      <p style="font-size:12px;color:#64748b;margin-bottom:10px;">いまはデバッグ用の別データを使っています。本番の売上・メニューには影響しません。</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" onclick="copyRealToDebug()">📥 本番データをコピー</button>
+      </div></div>`;
+  }
+  const rows=accts.map(([id,a])=>`<div class="acct-row"><span style="flex:1;font-weight:700;">${esc(a.name)}</span><span class="acct-type ${a.type==='debug'?'debug':''}">${a.type==='debug'?'デバッグ':'本番'}</span><button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" onclick="deleteAccount(${JSON.stringify(id)})">削除</button></div>`).join('');
+  return `<div class="card"><h3>🔐 ログインアカウント</h3>
+    <p style="font-size:12px;color:#64748b;margin-bottom:10px;">${accts.length===0?'アカウントが無いので、今はログイン不要です。最初に作る1件は本番用になり、以降はログインが必要になります。':'「デバッグ」アカウントでログインすると、本番とは完全に別のデータで試せます。'}</p>
+    ${rows}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+      <input id="ac-name" type="text" placeholder="アカウント名" style="flex:1;min-width:110px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;">
+      <input id="ac-pin" type="text" inputmode="numeric" placeholder="PIN(4桁以上)" style="width:110px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;">
+      <select id="ac-type" style="padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;"><option value="real">本番</option><option value="debug">デバッグ</option></select>
+      <button class="btn btn-success" onclick="addAccount()">追加</button>
+    </div></div>`;
+}
 //  BOOT
 (async function boot(){
   await _initTree();
-  startApp();
+  if(Object.keys(getAccounts()).length===0){ startApp(); return; }   // アカウント未作成＝従来どおりログイン不要
+  const saved=_loadLogin();
+  if(saved){
+    const a=getAccounts()[saved.id];
+    if(a&&String(a.pin)===String(saved.pin)){ enterAccount(saved.id,a); return; }
+  }
+  showScreen('login');
 })();
 </script>
 </body>
