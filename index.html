@@ -1490,9 +1490,9 @@ function renderPosMenuContent(){
           ${linkedHtml?`<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">${linkedHtml}</div>`:''}
         </div>
         <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-          <label class="toggle-switch"><input type="checkbox" ${isActive?'checked':''} onchange="toggleItem(${JSON.stringify(item.id)},this.checked)"><span class="toggle-slider"></span></label>
-          <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="showMenuEditModal(${JSON.stringify(item.id)})">✏️</button>
-          <button class="btn btn-danger" style="padding:6px 10px;font-size:12px;" onclick="deleteItem(${JSON.stringify(item.id)})">🗑️</button>
+          <label class="toggle-switch"><input type="checkbox" ${isActive?'checked':''} onchange="toggleItem(${JSON.stringify(item.id).replace(/"/g,'&quot;')},this.checked)"><span class="toggle-slider"></span></label>
+          <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="showMenuEditModal(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">✏️</button>
+          <button class="btn btn-danger" style="padding:6px 10px;font-size:12px;" onclick="deleteItem(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">🗑️</button>
         </div>
       </div>`;
     });
@@ -1519,9 +1519,9 @@ function renderPosMenuContent(){
           <div class="menu-row-name" style="${!isActive?'color:var(--gray);':''}">${item.isSet?'📦 ':''}${esc(item.name)}</div>
           <div class="menu-row-sub">¥${item.price.toLocaleString()}${item.category?' / '+item.category:''} / ${stockStr}</div>
         </div>
-        <label class="toggle-switch"><input type="checkbox" ${isActive?'checked':''} onchange="toggleItem(${JSON.stringify(item.id)},this.checked)"><span class="toggle-slider"></span></label>
-        <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="showMenuEditModal(${JSON.stringify(item.id)})">✏️</button>
-        <button class="btn btn-danger" style="padding:6px 10px;font-size:12px;" onclick="deleteItem(${JSON.stringify(item.id)})">🗑️</button>
+        <label class="toggle-switch"><input type="checkbox" ${isActive?'checked':''} onchange="toggleItem(${JSON.stringify(item.id).replace(/"/g,'&quot;')},this.checked)"><span class="toggle-slider"></span></label>
+        <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="showMenuEditModal(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">✏️</button>
+        <button class="btn btn-danger" style="padding:6px 10px;font-size:12px;" onclick="deleteItem(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">🗑️</button>
       </div>`;
     });
   }
@@ -1565,8 +1565,8 @@ function renderPosInventoryContent(){
         <span class="stk-badge ${cur<=0?'stk-zero':cur<=item.stock*0.2?'stk-low':'stk-ok'}" style="font-size:15px;padding:6px 14px;">${cur} 個</span>
         <div class="stk-ctrl">
           <input type="number" id="psi-${item.id}" placeholder="個数" min="0" style="width:70px;">
-          <button class="btn btn-success" style="padding:6px 9px;font-size:12px;" onclick="addStockPos(${JSON.stringify(item.id)})">補充</button>
-          <button class="btn btn-ghost" style="padding:6px 9px;font-size:12px;" onclick="setStockPos(${JSON.stringify(item.id)})">設定</button>
+          <button class="btn btn-success" style="padding:6px 9px;font-size:12px;" onclick="addStockPos(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">補充</button>
+          <button class="btn btn-ghost" style="padding:6px 9px;font-size:12px;" onclick="setStockPos(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">設定</button>
         </div>
         ${linkedHtml?`<div style="width:100%;margin-top:4px;">${linkedHtml}</div>`:''}
       </div>`;
@@ -1589,7 +1589,7 @@ function renderPosInventoryContent(){
       const cur=hasStock?(item.currentStock!=null?item.currentStock:item.stock):null;
       const isActive=item.active!==false;
       let badge=hasStock?`<span class="stk-badge ${cur<=0?'stk-zero':cur<=5?'stk-low':'stk-ok'}">${cur} 個</span>`:`<span class="stk-badge stk-unlimited">無制限</span>`;
-      let ctrl=hasStock?`<div class="stk-ctrl"><input type="number" id="psi-${item.id}" placeholder="数量" min="0"><button class="btn btn-success" style="padding:6px 9px;font-size:12px;" onclick="addStockPos(${JSON.stringify(item.id)})">補充</button><button class="btn btn-ghost" style="padding:6px 9px;font-size:12px;" onclick="setStockPos(${JSON.stringify(item.id)})">設定</button></div>`:'';
+      let ctrl=hasStock?`<div class="stk-ctrl"><input type="number" id="psi-${item.id}" placeholder="数量" min="0"><button class="btn btn-success" style="padding:6px 9px;font-size:12px;" onclick="addStockPos(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">補充</button><button class="btn btn-ghost" style="padding:6px 9px;font-size:12px;" onclick="setStockPos(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">設定</button></div>`:'';
       html+=`<div class="inv-item" style="${!isActive?'opacity:.5;':''}"><div class="inv-info"><div class="inv-name">${esc(item.name)}</div><div class="inv-sub">¥${item.price.toLocaleString()}${item.category?' / '+item.category:''}</div></div>${badge}${ctrl}</div>`;
     });
   }
@@ -2218,7 +2218,7 @@ function renderOrderTicketCard(order,opts){
     <div class="ticket-footer">
       ${opts.isDone
         ? `<div class="done-label">${opts.doneLabel}</div>`
-        : `<button class="complete-btn" onclick="${opts.actionFn}(${JSON.stringify(order.id)})">${opts.actionLabel}</button>`
+        : `<button class="complete-btn" onclick="${opts.actionFn}(${JSON.stringify(order.id).replace(/"/g,'&quot;')})">${opts.actionLabel}</button>`
       }
     </div>
   `;
@@ -2783,9 +2783,9 @@ function renderSettingsContent(){
           <div class="menu-row-name" style="${!isActive?'color:var(--gray);':''}">${setTag}${matTag}${esc(item.name)}</div>
           <div class="menu-row-sub">¥${item.price.toLocaleString()}${item.category?' / '+esc(item.category):''} / ${item.isSet?'セット':hasStock?`在庫:${cur}個`:'在庫管理なし'}</div>
         </div>
-        <label class="toggle-switch"><input type="checkbox" ${isActive?'checked':''} onchange="toggleItem(${JSON.stringify(item.id)},this.checked)"><span class="toggle-slider"></span></label>
-        <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="showMenuEditModal(${JSON.stringify(item.id)})">✏️</button>
-        <button class="btn btn-danger" style="padding:6px 10px;font-size:12px;" onclick="deleteItem(${JSON.stringify(item.id)})">🗑️</button>
+        <label class="toggle-switch"><input type="checkbox" ${isActive?'checked':''} onchange="toggleItem(${JSON.stringify(item.id).replace(/"/g,'&quot;')},this.checked)"><span class="toggle-slider"></span></label>
+        <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="showMenuEditModal(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">✏️</button>
+        <button class="btn btn-danger" style="padding:6px 10px;font-size:12px;" onclick="deleteItem(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">🗑️</button>
       </div>`;
     });
   }
@@ -2885,7 +2885,7 @@ function renderSalesContent(){
       const time=new Date(o.timestamp).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
       const stLabel=o.status==='completed'?['#16a34a','✅ 受渡済']:o.status==='cooked'?['#db2777','🛎️ お渡し待ち']:['var(--warning)','🍳 調理待ち'];
       const status=`<span style="color:${stLabel[0]};font-size:11px;">${stLabel[1]}</span>`;
-      const isCancellable=o.status!=='cancelled';html+=`<tr style="${o.status==='cancelled'?'opacity:.45;':''}"><td>#${o.orderNum||'-'} ${status}</td><td>${time}</td><td style="font-size:12px;">${esc((o.items||[]).map(i=>`${i.name}×${i.qty}`).join('、'))}</td><td style="font-weight:700;">¥${o.total.toLocaleString()}</td><td>${isCancellable?`<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="cancelOrder(${JSON.stringify(o.id)})">🗑️ 取消</button>`:''}</td></tr>`;
+      const isCancellable=o.status!=='cancelled';html+=`<tr style="${o.status==='cancelled'?'opacity:.45;':''}"><td>#${o.orderNum||'-'} ${status}</td><td>${time}</td><td style="font-size:12px;">${esc((o.items||[]).map(i=>`${i.name}×${i.qty}`).join('、'))}</td><td style="font-weight:700;">¥${o.total.toLocaleString()}</td><td>${isCancellable?`<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="cancelOrder(${JSON.stringify(o.id).replace(/"/g,'&quot;')})">🗑️ 取消</button>`:''}</td></tr>`;
     });
     html+=`</tbody></table></div></div>`;
   }
@@ -2944,7 +2944,7 @@ function renderInventoryContent(){
       const cur=hasStock?(item.currentStock!=null?item.currentStock:item.stock):null;
       const isActive=item.active!==false;
       let badge=hasStock?`<span class="stk-badge ${cur<=0?'stk-zero':cur<=5?'stk-low':'stk-ok'}">${cur} 個</span>`:`<span class="stk-badge stk-unlimited">無制限</span>`;
-      let ctrl=hasStock?`<div class="stk-ctrl"><input type="number" id="si-${item.id}" placeholder="数量" min="0"><button class="btn btn-success" style="padding:6px 9px;font-size:12px;" onclick="addStock(${JSON.stringify(item.id)})">補充</button><button class="btn btn-ghost" style="padding:6px 9px;font-size:12px;" onclick="setStock(${JSON.stringify(item.id)})">設定</button></div>`:'';
+      let ctrl=hasStock?`<div class="stk-ctrl"><input type="number" id="si-${item.id}" placeholder="数量" min="0"><button class="btn btn-success" style="padding:6px 9px;font-size:12px;" onclick="addStock(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">補充</button><button class="btn btn-ghost" style="padding:6px 9px;font-size:12px;" onclick="setStock(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">設定</button></div>`:'';
       html+=`<div class="inv-item" style="${!isActive?'opacity:.5;':''}"><div class="inv-info"><div class="inv-name">${esc(item.name)}${item.isMaterial?' <span style="font-size:10px;background:#fef9c3;color:#92400e;border-radius:4px;padding:1px 5px;">食材</span>':''}</div><div class="inv-sub">¥${item.price.toLocaleString()}${item.category?' / '+esc(item.category):''}</div></div>${badge}${ctrl}</div>`;
     });
   }
@@ -3910,7 +3910,7 @@ function renderAccountCard(){
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn btn-ghost" onclick="copyRealToDebug()">📥 本番データをコピー</button>
       </div></div>`:'';
-  const rows=accts.map(([id,a])=>`<div class="acct-row"><span style="flex:1;font-weight:700;">${esc(a.name)}${S.account&&S.account.id===id?' <small style="color:#16a34a;">（ログイン中）</small>':''}</span><span class="acct-type ${a.type==='debug'?'debug':''}">${a.type==='debug'?'デバッグ':'本番'}</span><button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" onclick="deleteAccount(${JSON.stringify(id)})">削除</button></div>`).join('');
+  const rows=accts.map(([id,a])=>`<div class="acct-row"><span style="flex:1;font-weight:700;">${esc(a.name)}${S.account&&S.account.id===id?' <small style="color:#16a34a;">（ログイン中）</small>':''}</span><span class="acct-type ${a.type==='debug'?'debug':''}">${a.type==='debug'?'デバッグ':'本番'}</span><button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" onclick="deleteAccount(${JSON.stringify(id).replace(/"/g,'&quot;')})">削除</button></div>`).join('');
   return dbgCard+`<div class="card"><h3>🔐 ログインアカウント</h3>
     <p style="font-size:12px;color:#64748b;margin-bottom:10px;">${accts.length===0?'アカウントが無いので、今はログイン不要です。最初に作る1件は本番用になり、以降はログインが必要になります。':'「デバッグ」アカウントでログインすると、本番とは完全に別のデータで試せます。'}</p>
     ${rows}
