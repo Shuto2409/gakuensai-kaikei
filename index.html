@@ -3876,11 +3876,16 @@ async function addAccount(){
 async function deleteAccount(id){
   const accts=getAccounts(), a=accts[id];
   if(!a) return;
-  const reals=Object.values(accts).filter(x=>x.type!=='debug');
-  if(a.type!=='debug'&&reals.length<=1){showToast('最後の本番アカウントは削除できません','error');return;}
-  if(S.account&&S.account.id===id){showToast('ログイン中のアカウントは削除できません','error');return;}
-  if(!confirm(`アカウント「${a.name}」を削除しますか？`)) return;
+  const own=S.account&&S.account.id===id;
+  const left=Object.keys(accts).length-1;
+  let msg=`アカウント「${a.name}」を削除しますか？`;
+  if(own) msg+='\n（ログイン中のアカウントです。削除後はログアウトします）';
+  if(left===0) msg+='\n最後のアカウントなので、削除するとログイン不要の状態に戻ります。';
+  else if(a.type!=='debug'&&!Object.entries(accts).some(([k,x])=>k!==id&&x.type!=='debug')) msg+='\n⚠️ 本番アカウントが無くなります。デバッグアカウントしか残りません。';
+  if(!confirm(msg)) return;
   await db.ref(`accounts/${id}`).remove();
+  if(own){ _saveLogin(null); location.reload(); return; }
+  showToast('アカウントを削除しました','success');
   renderSettingsContent();
 }
 async function copyRealToDebug(){
@@ -3900,15 +3905,13 @@ async function copyRealToDebug(){
 function renderAccountCard(){
   const accts=Object.entries(getAccounts());
   const isDebug=S.account&&S.account.type==='debug';
-  if(isDebug){
-    return `<div class="card"><h3>🧪 デバッグデータ</h3>
+  const dbgCard=isDebug?`<div class="card"><h3>🧪 デバッグデータ</h3>
       <p style="font-size:12px;color:#64748b;margin-bottom:10px;">いまはデバッグ用の別データを使っています。本番の売上・メニューには影響しません。</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn btn-ghost" onclick="copyRealToDebug()">📥 本番データをコピー</button>
-      </div></div>`;
-  }
-  const rows=accts.map(([id,a])=>`<div class="acct-row"><span style="flex:1;font-weight:700;">${esc(a.name)}</span><span class="acct-type ${a.type==='debug'?'debug':''}">${a.type==='debug'?'デバッグ':'本番'}</span><button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" onclick="deleteAccount(${JSON.stringify(id)})">削除</button></div>`).join('');
-  return `<div class="card"><h3>🔐 ログインアカウント</h3>
+      </div></div>`:'';
+  const rows=accts.map(([id,a])=>`<div class="acct-row"><span style="flex:1;font-weight:700;">${esc(a.name)}${S.account&&S.account.id===id?' <small style="color:#16a34a;">（ログイン中）</small>':''}</span><span class="acct-type ${a.type==='debug'?'debug':''}">${a.type==='debug'?'デバッグ':'本番'}</span><button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" onclick="deleteAccount(${JSON.stringify(id)})">削除</button></div>`).join('');
+  return dbgCard+`<div class="card"><h3>🔐 ログインアカウント</h3>
     <p style="font-size:12px;color:#64748b;margin-bottom:10px;">${accts.length===0?'アカウントが無いので、今はログイン不要です。最初に作る1件は本番用になり、以降はログインが必要になります。':'「デバッグ」アカウントでログインすると、本番とは完全に別のデータで試せます。'}</p>
     ${rows}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
