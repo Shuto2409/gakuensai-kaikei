@@ -321,6 +321,8 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 .order-ticket.compact .item-chk{width:20px;height:20px;}
 .ticket-item-row.checked .ticket-item-name{text-decoration:line-through;opacity:.45;}
 .ticket-item-row.checked .ticket-item-qty{opacity:.45;}
+.ticket-set-head{font-size:11px;font-weight:800;color:#7c3aed;padding:6px 0 0;}
+.ticket-item-row.in-set{padding-left:6px;}
 .cooked-tag{font-size:10px;font-weight:800;color:#16a34a;background:#dcfce7;border-radius:6px;padding:1px 5px;}
 .ticket-item-name{font-weight:800;font-size:16px;}
 .ticket-item-qty{background:#ede9fe;color:var(--kitchen);font-weight:900;padding:5px 14px;border-radius:20px;font-size:15px;}
@@ -2258,18 +2260,20 @@ function renderOrderTicketCard(order,opts){
       <div class="ticket-time">${time}</div>
     </div>
     <div class="ticket-items">
-      ${(order.items||[]).map((item,idx)=>{
+      ${orderLines(order).map(g=>{
         const ck=opts.checkKind&&!opts.isDone;
-        const on=ck&&order[opts.checkKind]&&order[opts.checkKind][idx];
-        const cooked=opts.showCooked&&order.itemsDone&&order.itemsDone[idx];
-        return `
-        <label class="ticket-item-row${ck?' chk':''}${on?' checked':''}">
-          ${ck?`<input type="checkbox" class="item-chk" ${on?'checked':''} onchange="toggleItemCheck('${order.id}','${opts.checkKind}',${idx},this.checked)">`:''}
-          <span class="ticket-item-name">${esc(item.name)}${cooked?' <small class="cooked-tag">🍳済</small>':''}</span>
-          <span class="ticket-item-qty">× ${item.qty}</span>
-        </label>
-        ${item.choices&&item.choices.length>0?`<div style="font-size:11px;color:#7c3aed;padding:0 0 4px 4px;">${item.choices.map(c=>`🔸 ${esc(c.label||c.compLabel||'')}: ${esc(c.name||'')}`).join(' / ')}</div>`:''}
-      `;}).join('')}
+        const head=g.setName?`<div class="ticket-set-head">📦 ${esc(g.setName)} × ${g.setQty}</div>`:'';
+        return head+g.lines.map(ln=>{
+          const on=ck&&order[opts.checkKind]&&order[opts.checkKind][ln.key];
+          const cooked=opts.showCooked&&order.itemsDone&&order.itemsDone[ln.key];
+          return `
+        <label class="ticket-item-row${ck?' chk':''}${on?' checked':''}${g.setName?' in-set':''}">
+          ${ck?`<input type="checkbox" class="item-chk" ${on?'checked':''} onchange="toggleItemCheck('${order.id}','${opts.checkKind}','${ln.key}',this.checked)">`:''}
+          <span class="ticket-item-name">${esc(ln.name)}${cooked?' <small class="cooked-tag">🍳済</small>':''}</span>
+          <span class="ticket-item-qty">× ${ln.qty}</span>
+        </label>`;
+        }).join('');
+      }).join('')}
     </div>
     ${opts.noAction?'':`<div class="ticket-footer">
       ${opts.isDone
@@ -2408,6 +2412,36 @@ function startElapsedTimer(){
   },1000);
 }
 
+// 注文の中身を「チェックできる最小単位（セットなら中身ごと）」に展開する
+function orderLines(order){
+  const groups=[];
+  (order.items||[]).forEach((it,i)=>{
+    const mi=S.menu[it.id]||S.menu[String(it.id)];
+    const comps=mi&&mi.isSet&&Array.isArray(mi.components)?mi.components:null;
+    if(!comps||comps.length===0){
+      groups.push({setName:null,lines:[{key:`${i}`,name:it.name,qty:it.qty}]});
+      return;
+    }
+    const lines=[];
+    let choiceIdx=0;
+    comps.forEach((c,ci)=>{
+      if(c.isChoice){
+        const ch=(it.choices||[])[choiceIdx++];
+        lines.push({key:`${i}_${ci}`,name:ch?ch.name||ch.label||'':(c.label||'選択'),qty:(c.qty||1)*it.qty});
+      } else {
+        const ref=S.menu[c.id]||S.menu[String(c.id)];
+        lines.push({key:`${i}_${ci}`,name:ref?ref.name:'(削除済み)',qty:(c.qty||1)*it.qty});
+      }
+    });
+    groups.push({setName:it.name,setQty:it.qty,lines});
+  });
+  return groups;
+}
+function allLinesChecked(order,kind){
+  const keys=orderLines(order).flatMap(g=>g.lines.map(l=>l.key));
+  const chk=order[kind]||{};
+  return keys.length>0&&keys.every(k=>chk[k]);
+}
 async function toggleItemCheck(orderId,kind,idx,on){
   if(kind!=='itemsDone'&&kind!=='itemsHanded') return;
   const order=S.ordersSnap[orderId];
@@ -2415,7 +2449,7 @@ async function toggleItemCheck(orderId,kind,idx,on){
   await db.ref(`${ROOT}/orders/${orderId}/${kind}/${idx}`).set(on?true:null);
   const checks={...(order[kind]||{})};
   if(on) checks[idx]=true; else delete checks[idx];
-  const all=(order.items||[]).length>0&&(order.items||[]).every((_,i)=>checks[i]);
+  const all=allLinesChecked({...order,[kind]:checks},kind);
   if(!all) return;
   const st=order.status||'pending';
   if(kind==='itemsDone'&&st==='pending'){
@@ -2435,8 +2469,8 @@ async function completeCooking(orderId){
   }
   showToast('調理完了にしました 🍳','success');
   // すでに全品お渡し済み（ドリンクなど先渡し）なら、そのまま受け渡し完了へ
-  const items=order?.items||[];
-  if(items.length>0&&items.every((_,i)=>order.itemsHanded&&order.itemsHanded[i])) await completeHandoff(orderId);
+  const fresh=S.ordersSnap[orderId]||order;
+  if(fresh&&allLinesChecked(fresh,'itemsHanded')) await completeHandoff(orderId);
 }
 
 //  KITCHEN: 整理券パネル表示（調理待ち = in_use のみ）
@@ -2499,7 +2533,7 @@ function renderHandoff(){
     cgrid.innerHTML=`<div class="kitchen-empty"><div class="icon">🍳</div><p>調理中の注文はありません</p></div>`;
   } else cooking.forEach(order=>{
     cgrid.appendChild(renderOrderTicketCard(order,{
-      isDone:false,compact:true,noAction:true,checkKind:'itemsHanded',showCooked:true,
+      isDone:false,compact:true,noAction:true,showCooked:true,
       elapsedFromTs:new Date(order.timestamp).getTime()
     }));
   });
