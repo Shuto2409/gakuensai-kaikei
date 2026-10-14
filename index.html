@@ -315,6 +315,13 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 .ticket-item-name{min-width:0;}
 .ticket-item-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px;}
 .ticket-item-row:last-child{border-bottom:none;}
+.ticket-item-row.chk{cursor:pointer;gap:10px;justify-content:flex-start;}
+.ticket-item-row.chk .ticket-item-name{flex:1;}
+.item-chk{width:24px;height:24px;flex-shrink:0;accent-color:#16a34a;cursor:pointer;}
+.order-ticket.compact .item-chk{width:20px;height:20px;}
+.ticket-item-row.checked .ticket-item-name{text-decoration:line-through;opacity:.45;}
+.ticket-item-row.checked .ticket-item-qty{opacity:.45;}
+.cooked-tag{font-size:10px;font-weight:800;color:#16a34a;background:#dcfce7;border-radius:6px;padding:1px 5px;}
 .ticket-item-name{font-weight:800;font-size:16px;}
 .ticket-item-qty{background:#ede9fe;color:var(--kitchen);font-weight:900;padding:5px 14px;border-radius:20px;font-size:15px;}
 .order-ticket.done .ticket-item-qty{background:#f3f4f6;color:var(--gray);}
@@ -2251,13 +2258,18 @@ function renderOrderTicketCard(order,opts){
       <div class="ticket-time">${time}</div>
     </div>
     <div class="ticket-items">
-      ${(order.items||[]).map(item=>`
-        <div class="ticket-item-row">
-          <span class="ticket-item-name">${esc(item.name)}</span>
+      ${(order.items||[]).map((item,idx)=>{
+        const ck=opts.checkKind&&!opts.isDone;
+        const on=ck&&order[opts.checkKind]&&order[opts.checkKind][idx];
+        const cooked=opts.showCooked&&order.itemsDone&&order.itemsDone[idx];
+        return `
+        <label class="ticket-item-row${ck?' chk':''}${on?' checked':''}">
+          ${ck?`<input type="checkbox" class="item-chk" ${on?'checked':''} onchange="toggleItemCheck('${order.id}','${opts.checkKind}',${idx},this.checked)">`:''}
+          <span class="ticket-item-name">${esc(item.name)}${cooked?' <small class="cooked-tag">🍳済</small>':''}</span>
           <span class="ticket-item-qty">× ${item.qty}</span>
-        </div>
+        </label>
         ${item.choices&&item.choices.length>0?`<div style="font-size:11px;color:#7c3aed;padding:0 0 4px 4px;">${item.choices.map(c=>`🔸 ${esc(c.label||c.compLabel||'')}: ${esc(c.name||'')}`).join(' / ')}</div>`:''}
-      `).join('')}
+      `;}).join('')}
     </div>
     ${opts.noAction?'':`<div class="ticket-footer">
       ${opts.isDone
@@ -2309,7 +2321,8 @@ function renderKitchen(){
       isDone:false,
       elapsedFromTs:new Date(order.timestamp).getTime(),
       actionLabel:'✓ 調理完了',
-      actionFn:'completeCooking'
+      actionFn:'completeCooking',
+      checkKind:'itemsDone'
     });
     grid.appendChild(card);
   });
@@ -2395,6 +2408,22 @@ function startElapsedTimer(){
   },1000);
 }
 
+async function toggleItemCheck(orderId,kind,idx,on){
+  if(kind!=='itemsDone'&&kind!=='itemsHanded') return;
+  const order=S.ordersSnap[orderId];
+  if(!order) return;
+  await db.ref(`${ROOT}/orders/${orderId}/${kind}/${idx}`).set(on?true:null);
+  const checks={...(order[kind]||{})};
+  if(on) checks[idx]=true; else delete checks[idx];
+  const all=(order.items||[]).length>0&&(order.items||[]).every((_,i)=>checks[i]);
+  if(!all) return;
+  const st=order.status||'pending';
+  if(kind==='itemsDone'&&st==='pending'){
+    await completeCooking(orderId);
+  } else if(kind==='itemsHanded'&&st==='cooked'){
+    await completeHandoff(orderId);
+  }
+}
 async function completeCooking(orderId){
   const order=S.ordersSnap[orderId];
   await db.ref(`${ROOT}/orders/${orderId}/status`).set('cooked');
@@ -2405,6 +2434,9 @@ async function completeCooking(orderId){
     if(tk) await db.ref(`${ROOT}/tickets/${tk.id}`).update({status:'called'});
   }
   showToast('調理完了にしました 🍳','success');
+  // すでに全品お渡し済み（ドリンクなど先渡し）なら、そのまま受け渡し完了へ
+  const items=order?.items||[];
+  if(items.length>0&&items.every((_,i)=>order.itemsHanded&&order.itemsHanded[i])) await completeHandoff(orderId);
 }
 
 //  KITCHEN: 整理券パネル表示（調理待ち = in_use のみ）
@@ -2467,7 +2499,7 @@ function renderHandoff(){
     cgrid.innerHTML=`<div class="kitchen-empty"><div class="icon">🍳</div><p>調理中の注文はありません</p></div>`;
   } else cooking.forEach(order=>{
     cgrid.appendChild(renderOrderTicketCard(order,{
-      isDone:false,compact:true,noAction:true,
+      isDone:false,compact:true,noAction:true,checkKind:'itemsHanded',showCooked:true,
       elapsedFromTs:new Date(order.timestamp).getTime()
     }));
   });
@@ -2477,7 +2509,7 @@ function renderHandoff(){
     grid.innerHTML=`<div class="kitchen-empty"><div class="icon">🛎️</div><p>お渡し待ちの注文はありません</p></div>`;
   } else waiting.forEach(order=>{
     grid.appendChild(renderOrderTicketCard(order,{
-      isDone:false,compact:true,
+      isDone:false,compact:true,checkKind:'itemsHanded',
       elapsedFromTs:new Date(order.cookedAt||order.timestamp).getTime(),
       actionLabel:'✓ 受け渡し完了',
       actionFn:'completeHandoff'
