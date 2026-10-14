@@ -2423,16 +2423,35 @@ function orderLines(order){
       return;
     }
     const lines=[];
-    let choiceIdx=0;
+    let choiceIdx=0, matQty=0, matNames=[], matAt=-1;
     comps.forEach((c,ci)=>{
       if(c.isChoice){
         const ch=(it.choices||[])[choiceIdx++];
         lines.push({key:`${i}_${ci}`,name:ch?ch.name||ch.label||'':(c.label||'選択'),qty:(c.qty||1)*it.qty});
       } else {
         const ref=S.menu[c.id]||S.menu[String(c.id)];
-        lines.push({key:`${i}_${ci}`,name:ref?ref.name:'(削除済み)',qty:(c.qty||1)*it.qty});
+        if(ref&&ref.isMaterial){
+          // 食材（じゃがいも・バターなど）は分けず、まとめて1行にする
+          if(matAt<0){matAt=lines.length;lines.push(null);}
+          matQty=Math.max(matQty,(c.qty||1)*it.qty);
+          matNames.push(ref.name);
+        } else {
+          lines.push({key:`${i}_${ci}`,name:ref?ref.name:'(削除済み)',qty:(c.qty||1)*it.qty});
+        }
       }
     });
+    if(matAt>=0){
+      // 名前はセット名のかっこ内（例: Cセット(じゃがバター×2,ドリンク×1)）から、選択式の項目以外を採用
+      const choiceLabels=comps.filter(c=>c.isChoice).map(c=>c.label||'');
+      const m=String(it.name).match(/[（(]([^）)]*)[）)]/);
+      let nm='';
+      if(m){
+        const seg=m[1].split(/[,、，]/).map(x=>x.replace(/[×xX＊*]\s*\d+\s*$/,'').trim()).filter(Boolean)
+          .filter(x=>!choiceLabels.includes(x));
+        if(seg.length===1) nm=seg[0];
+      }
+      lines[matAt]={key:`${i}_m`,name:nm||matNames.join('・'),qty:matQty};
+    }
     groups.push({setName:it.name,setQty:it.qty,lines});
   });
   return groups;
