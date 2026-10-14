@@ -288,7 +288,31 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 .ticket-num{font-size:32px;font-weight:900;letter-spacing:-1px;line-height:1;}
 .ticket-time{font-size:12px;opacity:.85;text-align:right;}
 .ticket-elapsed{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.2);padding:4px 10px;border-radius:20px;font-size:13px;font-weight:800;margin-top:5px;}
-.ticket-items{padding:14px 18px;}
+.handoff-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;}
+@media(max-width:700px){.handoff-cols{grid-template-columns:1fr;}}
+.handoff-col-title{font-size:15px;font-weight:900;padding:8px 14px;border-radius:12px;margin-bottom:10px;}
+.handoff-col-title.cooking{background:#ede9fe;color:#5b21b6;}
+.handoff-col-title.ready{background:#dcfce7;color:#166534;}
+.compact-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+.compact-grid .kitchen-empty{padding:28px 10px;font-size:13px;}
+.compact-grid .kitchen-empty .icon{font-size:34px;margin-bottom:6px;}
+.compact-grid .kitchen-empty p{font-size:13px;}
+.order-ticket.compact{border-radius:14px;}
+.order-ticket.compact .ticket-header{padding:8px 12px;}
+.order-ticket.compact .ticket-num{font-size:22px;}
+.order-ticket.compact .ticket-time{font-size:11px;}
+.order-ticket.compact .ticket-elapsed{font-size:11px;padding:2px 8px;margin-top:3px;}
+.order-ticket.compact .ticket-srq-badge{font-size:13px;padding:2px 8px;border-width:1px;}
+.order-ticket.compact .ticket-items{padding:6px 12px;}
+.order-ticket.compact .ticket-item-row{padding:5px 0;}
+.order-ticket.compact .ticket-item-name{font-size:13px;}
+.order-ticket.compact .ticket-item-qty{font-size:12px;padding:2px 9px;}
+.order-ticket.compact .ticket-footer{padding:8px 10px;}
+.order-ticket.compact .complete-btn{padding:9px;font-size:13px;border-radius:9px;}
+.order-ticket{display:flex;flex-direction:column;}
+.ticket-items{padding:14px 18px;flex:1;}
+.ticket-item-qty{white-space:nowrap;flex-shrink:0;margin-left:8px;}
+.ticket-item-name{min-width:0;}
 .ticket-item-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px;}
 .ticket-item-row:last-child{border-bottom:none;}
 .ticket-item-name{font-weight:800;font-size:16px;}
@@ -948,7 +972,16 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
           <h2 id="handoff-title">お渡し待ちの注文</h2>
           <div class="kitchen-stats" id="handoff-stats"></div>
         </div>
-        <div id="handoff-grid"></div>
+        <div class="handoff-cols">
+          <div class="handoff-col">
+            <div class="handoff-col-title cooking">🍳 調理中 <span id="handoff-cooking-count"></span></div>
+            <div id="handoff-cooking-grid" class="compact-grid"></div>
+          </div>
+          <div class="handoff-col">
+            <div class="handoff-col-title ready">🛎️ お渡し待ち <span id="handoff-ready-count"></span></div>
+            <div id="handoff-grid" class="compact-grid"></div>
+          </div>
+        </div>
       </div>
       <div class="kitchen-side">
         <!-- 呼び出し中の整理券 -->
@@ -1034,11 +1067,11 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 
     <!-- バザー券 -->
     <div id="voucher-group" style="display:none;border:2px solid #fbcfe8;border-radius:14px;overflow:hidden;margin-bottom:14px;">
-      <div style="background:#fdf2f8;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+      <div onclick="toggleVoucherList()" style="background:#fdf2f8;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;">
         <div style="font-size:13px;font-weight:800;color:#9d174d;">🎫 バザー券（1枚 ¥100）</div>
-        <div style="font-size:12px;font-weight:700;color:#9d174d;" id="voucher-total-label">合計 ¥0</div>
+        <div style="font-size:12px;font-weight:700;color:#9d174d;"><span id="voucher-total-label">なし</span> <span id="voucher-chev">▼</span></div>
       </div>
-      <div style="padding:10px 12px;background:white;" id="voucher-color-list"></div>
+      <div style="padding:10px 12px;background:white;display:none;" id="voucher-color-list"></div>
       <div id="voucher-warning" style="display:none;background:#fef2f2;color:#b91c1c;font-size:12px;font-weight:700;padding:8px 14px;line-height:1.6;">⚠️ バザー券が商品代金を超えています。超えた分はお返しできません。会計前にお客様へ「¥<span id="voucher-over-amount">0</span>分は返金できませんがよろしいですか？」とご確認ください。</div>
     </div>
 
@@ -1955,19 +1988,28 @@ function renderVoucherGroup(){
   const colors=Object.entries(S.voucherColorsSnap||{}).sort((a,b)=>(a[1].order||0)-(b[1].order||0));
   if(colors.length===0){ group.style.display='none'; return; }
   group.style.display='block';
+  list.style.display=S.voucherOpen?'grid':'none';
+  list.style.gridTemplateColumns='repeat(auto-fill,minmax(150px,1fr))';
+  list.style.gap='8px';
+  const chev=document.getElementById('voucher-chev'); if(chev) chev.textContent=S.voucherOpen?'▲':'▼';
   list.innerHTML=colors.map(([id,c])=>{
     const n=S.voucherInput[id]||0;
-    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 2px;">
-      <span style="width:16px;height:16px;border-radius:50%;background:${esc(c.hex)};display:inline-block;border:1px solid rgba(0,0,0,.15);flex-shrink:0;"></span>
-      <span style="flex:1;font-size:13.5px;font-weight:700;">${esc(c.label)}</span>
-      <span class="qty-controls">
-        <button type="button" class="qty-btn qty-minus" onclick="changeVoucherQty('${id}',-1)">−</button>
-        <span class="qty-num">${n}</span>
-        <button type="button" class="qty-btn qty-plus" onclick="changeVoucherQty('${id}',1)">＋</button>
-      </span>
-    </div>`;
+    const max=Math.max(20,n);
+    let opts='';
+    for(let i=0;i<=max;i++) opts+=`<option value="${i}"${i===n?' selected':''}>${i}枚</option>`;
+    return `<label style="display:flex;align-items:center;gap:7px;padding:4px 6px;border:1px solid #fbcfe8;border-radius:10px;">
+      <span style="width:14px;height:14px;border-radius:50%;background:${esc(c.hex)};display:inline-block;border:1px solid rgba(0,0,0,.15);flex-shrink:0;"></span>
+      <span style="flex:1;font-size:13px;font-weight:700;">${esc(c.label)}</span>
+      <select onchange="setVoucherQty('${id}',this.value)" style="padding:4px 2px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;background:#fff;">${opts}</select>
+    </label>`;
   }).join('');
   updateVoucherTotals();
+}
+function toggleVoucherList(){S.voucherOpen=!S.voucherOpen;renderVoucherGroup();}
+function setVoucherQty(id,v){
+  S.voucherInput[id]=Math.max(0,parseInt(v)||0);
+  renderVoucherGroup();
+  calcChange();
 }
 function changeVoucherQty(id,delta){
   const n=(S.voucherInput[id]||0)+delta;
@@ -1978,7 +2020,8 @@ function changeVoucherQty(id,delta){
 function updateVoucherTotals(){
   const vt=voucherTotalYen();
   const lbl=document.getElementById('voucher-total-label');
-  if(lbl) lbl.textContent=`合計 ¥${vt.toLocaleString()}`;
+  const cnt=voucherTotalYen()/VOUCHER_FACE_VALUE;
+  if(lbl) lbl.textContent=cnt>0?`${cnt}枚 ¥${vt.toLocaleString()}`:'なし';
   const total=S.cart.reduce((s,i)=>s+(Number(i.price)||0)*i.qty,0);
   const warn=document.getElementById('voucher-warning');
   if(warn){
@@ -1997,6 +2040,7 @@ function showPaymentModal(){
   }).join('');
   document.getElementById('pay-total').textContent=`¥${total.toLocaleString()}`;
   S.voucherInput={};
+  S.voucherOpen=false;
   renderVoucherGroup();
   renderQuickCashBtns(total);
   document.getElementById('cash-input').value='';
@@ -2195,7 +2239,7 @@ function renderOrderTicketCard(order,opts){
     elapsedHtml=`<div class="ticket-elapsed">${isCritical?'🔴':isUrgent?'🟡':'🟢'} <span class="elapsed-display" data-ts="${opts.elapsedFromTs}">${elapsedMin}分${elapsedSec}秒</span></div>`;
   }
   const card=document.createElement('div');
-  card.className='order-ticket '+urgencyClass;
+  card.className='order-ticket '+urgencyClass+(opts.compact?' compact':'');
   card.dataset.orderId=order.id;
   card.innerHTML=`
     <div class="${headerClass}">
@@ -2215,12 +2259,12 @@ function renderOrderTicketCard(order,opts){
         ${item.choices&&item.choices.length>0?`<div style="font-size:11px;color:#7c3aed;padding:0 0 4px 4px;">${item.choices.map(c=>`🔸 ${esc(c.label||c.compLabel||'')}: ${esc(c.name||'')}`).join(' / ')}</div>`:''}
       `).join('')}
     </div>
-    <div class="ticket-footer">
+    ${opts.noAction?'':`<div class="ticket-footer">
       ${opts.isDone
         ? `<div class="done-label">${opts.doneLabel}</div>`
         : `<button class="complete-btn" onclick="${opts.actionFn}(${JSON.stringify(order.id).replace(/"/g,'&quot;')})">${opts.actionLabel}</button>`
       }
-    </div>
+    </div>`}
   `;
   return card;
 }
@@ -2391,22 +2435,26 @@ function renderKitchenTickets(){
 //  HANDOFF（受け渡し：調理完了 → 受け渡し完了）
 function renderHandoff(){
   const grid=document.getElementById('handoff-grid');
-  if(!grid) return;
-  if(!S.isDayOpen){grid.innerHTML='';renderDoneFeed('handoff-done-feed',[],'completedAt','まだ受け渡し完了した注文はありません','受け渡し完了');return;}
+  const cgrid=document.getElementById('handoff-cooking-grid');
+  if(!grid||!cgrid) return;
+  if(!S.isDayOpen){grid.innerHTML='';cgrid.innerHTML='';renderDoneFeed('handoff-done-feed',[],'completedAt','まだ受け渡し完了した注文はありません','受け渡し完了');return;}
 
   const dayOrders=Object.values(S.ordersSnap)
     .filter(o=>o.dayId===S.currentDay.id)
     .sort((a,b)=>(a.cookedAt||a.timestamp).localeCompare(b.cookedAt||b.timestamp));
 
+  const cooking=dayOrders.filter(o=>(o.status||'pending')==='pending').sort((a,b)=>a.timestamp.localeCompare(b.timestamp));
   const waiting=dayOrders.filter(o=>o.status==='cooked');
   const handedOff=dayOrders.filter(o=>o.status==='completed');
 
-  document.getElementById('handoff-title').textContent=
-    `お渡し待ちの注文${waiting.length>0?` (${waiting.length}件)`:''}`;
+  document.getElementById('handoff-title').textContent='注文の状況';
+  document.getElementById('handoff-cooking-count').textContent=cooking.length>0?`(${cooking.length}件)`:'';
+  document.getElementById('handoff-ready-count').textContent=waiting.length>0?`(${waiting.length}件)`:'';
 
   const statsEl=document.getElementById('handoff-stats');
   if(statsEl){
     statsEl.innerHTML=`
+      <div class="k-stat">🍳 調理中 ${cooking.length}</div>
       <div class="k-stat">🛎️ お渡し待ち ${waiting.length}</div>
       <div class="k-stat">✅ 受け渡し完了 ${handedOff.length}</div>
     `;
@@ -2414,20 +2462,26 @@ function renderHandoff(){
 
   renderDoneFeed('handoff-done-feed',handedOff,'completedAt','まだ受け渡し完了した注文はありません','受け渡し完了');
 
-  if(waiting.length===0){
-    grid.innerHTML=`<div class="kitchen-empty"><div class="icon">🛎️</div><p>お渡し待ちの注文はありません</p></div>`;
-    return;
-  }
+  cgrid.innerHTML='';
+  if(cooking.length===0){
+    cgrid.innerHTML=`<div class="kitchen-empty"><div class="icon">🍳</div><p>調理中の注文はありません</p></div>`;
+  } else cooking.forEach(order=>{
+    cgrid.appendChild(renderOrderTicketCard(order,{
+      isDone:false,compact:true,noAction:true,
+      elapsedFromTs:new Date(order.timestamp).getTime()
+    }));
+  });
 
   grid.innerHTML='';
-  waiting.forEach(order=>{
-    const card=renderOrderTicketCard(order,{
-      isDone:false,
+  if(waiting.length===0){
+    grid.innerHTML=`<div class="kitchen-empty"><div class="icon">🛎️</div><p>お渡し待ちの注文はありません</p></div>`;
+  } else waiting.forEach(order=>{
+    grid.appendChild(renderOrderTicketCard(order,{
+      isDone:false,compact:true,
       elapsedFromTs:new Date(order.cookedAt||order.timestamp).getTime(),
       actionLabel:'✓ 受け渡し完了',
       actionFn:'completeHandoff'
-    });
-    grid.appendChild(card);
+    }));
   });
   startElapsedTimer();
 }
