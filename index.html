@@ -270,6 +270,38 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 .kt-badge.done{background:#f1f5f9;color:#94a3b8;}
 .kt-empty{padding:20px 14px;text-align:center;color:#94a3b8;font-size:12px;font-weight:600;}
 
+
+/* ドリンク温度 */
+.temp-opts{display:inline-flex;gap:6px;}
+.temp-opt{display:inline-flex;align-items:center;cursor:pointer;}
+.temp-opt input{display:none;}
+.temp-opt span{padding:5px 12px;border:2px solid var(--border);border-radius:999px;font-size:13px;font-weight:800;background:#fff;}
+.temp-opt input:checked+span{background:#0ea5e9;color:#fff;border-color:#0ea5e9;}
+.temp-big{display:flex;gap:10px;}
+.temp-opt.big{flex:1;}
+.temp-opt.big span{display:block;width:100%;text-align:center;padding:16px 8px;font-size:17px;border-radius:14px;}
+.ln-sub{display:block;font-size:11px;font-weight:700;color:#0369a1;margin-top:1px;}
+/* 注文カード: 整理券を大きく / 全カード同じ大きさ */
+.ticket-big-no{font-size:38px;font-weight:900;line-height:1;letter-spacing:-1px;display:flex;align-items:baseline;gap:6px;}
+.ticket-big-no small{font-size:11px;font-weight:800;letter-spacing:0;opacity:.85;}
+.ticket-big-no.none{font-size:26px;}
+.ticket-ordno{font-size:10px;opacity:.8;margin-top:2px;font-weight:700;}
+#kitchen-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))!important;gap:10px;grid-auto-rows:260px;}
+.compact-grid{grid-auto-rows:260px;}
+.order-ticket{height:100%;min-height:0;}
+.order-ticket .ticket-items{overflow-y:auto;min-height:0;}
+.order-ticket.compact .ticket-big-no{font-size:30px;}
+.order-ticket.compact .ticket-big-no.none{font-size:20px;}
+.order-ticket.compact .ticket-header{padding:8px 12px;flex-shrink:0;}
+.order-ticket .ticket-footer{flex-shrink:0;}
+.compact-grid .kitchen-empty,#kitchen-grid .kitchen-empty{grid-column:1/-1;grid-row:auto;}
+/* 注文画面: セット / 単品 / ドリンクを横並び */
+.menu-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:start;}
+@media(max-width:820px){.menu-cols{grid-template-columns:1fr;}}
+.menu-col-title{font-size:14px;font-weight:900;color:#334155;padding:6px 10px;background:#e2e8f0;border-radius:10px;margin-bottom:10px;text-align:center;}
+.menu-col-list{display:grid;grid-template-columns:1fr;gap:10px;}
+@media(min-width:1500px){.menu-col-list{grid-template-columns:repeat(2,1fr);}}
+
 /* 注文チケット */
 #kitchen-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
 @media(min-width:1200px){#kitchen-grid{grid-template-columns:repeat(3,1fr);}}
@@ -1170,7 +1202,11 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 
     <!-- 価格（食材は非表示） -->
     <div class="form-group" id="e-price-group"><label>価格（円）<span style="color:var(--danger)">*</span></label><input type="number" id="e-price" placeholder="300" min="0"></div>
-    <div class="form-group"><label>カテゴリー（任意）</label><input type="text" id="e-cat" placeholder="フード / ドリンク / デザート"></div>
+    <div class="form-group"><label>カテゴリー（任意）</label><input type="text" id="e-cat" placeholder="フード / ドリンク / デザート" oninput="autoDrinkFromCat()"></div>
+    <label id="e-drink-group" style="display:flex;align-items:center;gap:9px;cursor:pointer;padding:9px 12px;border-radius:10px;border:2px solid var(--border);background:#fff;margin-bottom:13px;">
+      <input type="checkbox" id="e-is-drink" style="width:18px;height:18px;accent-color:#0ea5e9;">
+      <div><div style="font-weight:700;font-size:13px;">🥤 ドリンク</div><div style="font-size:11px;color:var(--gray);">常温／冷蔵を選べて、単品なら調理を通さず受け渡しへ</div></div>
+    </label>
 
     <!-- 通常商品・食材：在庫数 -->
     <div class="form-group" id="e-stock-group"><label>初期在庫数（0 = 在庫管理なし）</label><input type="number" id="e-stock" placeholder="0" min="0" value="0"></div>
@@ -1464,26 +1500,40 @@ function updateRoleScreen(){
   }
 }
 
+const SCREEN_KEY='festival_screen_v1';
+function saveScreen(name){try{if(name)localStorage.setItem(SCREEN_KEY,name);else localStorage.removeItem(SCREEN_KEY);}catch(e){}}
+function restoreScreen(){
+  let n=null;try{n=localStorage.getItem(SCREEN_KEY);}catch(e){}
+  if(n==='cashier') enterCashier();
+  else if(n==='kitchen') enterKitchen();
+  else if(n==='handoff') enterHandoff();
+  else if(n==='pos') enterPos();
+  else if(n==='admin') enterAdmin();
+}
 function enterCashier(){
   if(!S.isDayOpen){showToast('まだオープンしていません','warning');return;}
   S.currentRole='cashier';
+  saveScreen('cashier');
   showScreen('cashier');
 }
 
 function enterKitchen(){
   if(!S.isDayOpen){showToast('まだオープンしていません','warning');return;}
   S.currentRole='kitchen';
+  saveScreen('kitchen');
   showScreen('kitchen');
 }
 
 function enterHandoff(){
   if(!S.isDayOpen){showToast('まだオープンしていません','warning');return;}
   S.currentRole='handoff';
+  saveScreen('handoff');
   showScreen('handoff');
 }
 
 function enterPos(){
   S.currentRole='pos';
+  saveScreen('pos');
   showScreen('pos');
 }
 
@@ -1658,7 +1708,7 @@ async function setStockPos(id){
 
 function enterAdmin(){
   S.currentRole='admin';
-  showAdminPin(()=>showScreen('admin'));
+  showAdminPin(()=>{saveScreen('admin');showScreen('admin');});
 }
 
 let _clockTimer=null;
@@ -1687,6 +1737,7 @@ function stopClock(){
 
 function backToRole(){
   S.currentRole=null;
+  saveScreen(null);
   if(_kitchenTimer){clearInterval(_kitchenTimer);_kitchenTimer=null;}
   showScreen('role');
 }
@@ -1813,6 +1864,7 @@ function renderCategoryFilter(){
   const cats=[...new Set(Object.values(S.menu).filter(i=>!i.isMaterial).map(i=>i.category).filter(Boolean))];
   const el=document.getElementById('cat-filter');
   if(!el) return;
+  el.style.display='none'; return;
   el.innerHTML=`<button class="cat-btn ${S.selCat==='all'?'active':''}" onclick="filterCat('all')" data-c="all">すべて</button>`;
   cats.forEach(c=>{el.innerHTML+=`<button class="cat-btn ${S.selCat===c?'active':''}" onclick="filterCat(this.dataset.c)" data-c="${esc(c)}">${esc(c)}</button>`;});
 }
@@ -1847,48 +1899,41 @@ function renderMenu(){
   };
 
   grid.innerHTML='';
-
-  if(S.selCat==='all'){
-    // カテゴリごとにグループ化して表示
-    const grouped=new Map();
-    all.forEach(item=>{
-      const cat=item.category||'その他';
-      if(!grouped.has(cat)) grouped.set(cat,[]);
-      grouped.get(cat).push(item);
-    });
-    // カテゴリあり→アルファベット順、「その他」を末尾に
-    const keys=[...grouped.keys()].filter(k=>k!=='その他').sort();
-    if(grouped.has('その他')) keys.push('その他');
-    if(keys.length===0){
-      grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>メニューがありません<br>管理画面から追加してください</p></div>`;
-      return;
-    }
-    const showHdr=keys.length>1||(keys.length===1&&keys[0]!=='その他');
-    keys.forEach(cat=>{
-      if(showHdr){
-        const hdr=document.createElement('div');
-        hdr.className='cat-section-hdr';
-        hdr.textContent=cat;
-        grid.appendChild(hdr);
-      }
-      const row=document.createElement('div');
-      row.className='menu-grid-inner';
-      grouped.get(cat).forEach(item=>row.appendChild(mkBtn(item)));
-      grid.appendChild(row);
-    });
-  }else{
-    // 特定カテゴリのみフラット表示
-    const items=all.filter(i=>(i.category||'')=== S.selCat);
-    if(items.length===0){
-      grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>このカテゴリの商品はありません</p></div>`;
-      return;
-    }
-    items.forEach(item=>grid.appendChild(mkBtn(item)));
+  grid.style.display='block';
+  if(all.length===0){
+    grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>メニューがありません<br>管理画面から追加してください</p></div>`;
+    return;
   }
+  const cols=[
+    ['📦 セット',all.filter(i=>i.isSet)],
+    ['🍟 単品',all.filter(i=>!i.isSet&&!isDrinkItem(i))],
+    ['🥤 ドリンク',all.filter(i=>isDrinkItem(i))],
+  ];
+  const wrap=document.createElement('div');
+  wrap.className='menu-cols';
+  cols.forEach(([title,items])=>{
+    const col=document.createElement('div');
+    const h=document.createElement('div');h.className='menu-col-title';h.textContent=title;
+    const list=document.createElement('div');list.className='menu-col-list';
+    items.forEach(it=>list.appendChild(mkBtn(it)));
+    if(items.length===0) list.innerHTML='<div style="text-align:center;color:#94a3b8;font-size:12px;padding:10px;">なし</div>';
+    col.appendChild(h);col.appendChild(list);wrap.appendChild(col);
+  });
+  grid.appendChild(wrap);
 }
+
+//  DRINK
+function isDrinkItem(mi){
+  if(!mi||mi.isSet||mi.isMaterial) return false;
+  if(mi.isDrink===true||mi.isDrink===false) return mi.isDrink;
+  return /ドリンク|飲み物|drink/i.test(mi.category||'');
+}
+const TEMP_OPTS=[['常温','🌡️'],['冷蔵','🧊']];
+function tempLabel(t){return t?((t==='冷蔵'?'🧊 ':'🌡️ ')+t):'';}
 
 //  CART
 function addToCart(item){
+  if(isDrinkItem(item)){ showChoiceModal(item); return; }
   // 選択式コンポーネントがあれば選択モーダルを先に表示
   if(item.isSet&&item.components&&item.components.some(c=>c.isChoice)){
     showChoiceModal(item); return;
@@ -1905,8 +1950,17 @@ function addToCart(item){
   }else{S.cart.push({...item,qty:1});}
   renderCart();
 }
+function addToCartWithTemp(item,temp){
+  const key='t:'+temp;
+  const ex=S.cart.find(c=>c.id===item.id&&c._choiceKey===key);
+  if(ex){
+    if(item.stock>0&&ex.qty>=(item.currentStock!=null?item.currentStock:item.stock)){showToast('在庫が足りません','error');return;}
+    ex.qty++;
+  } else S.cart.push({...item,qty:1,temp,_choiceKey:key});
+  renderCart();
+}
 function addToCartWithChoices(item,choices){
-  const choiceKey=choices.map(c=>c.id).join('|');
+  const choiceKey=choices.map(c=>c.id+(c.temp?':'+c.temp:'')).join('|');
   const ex=S.cart.find(c=>c.id===item.id&&c._choiceKey===choiceKey);
   if(ex){
     const avail=getSetAvailability(item);
@@ -1961,8 +2015,8 @@ function renderCart(){
   S.cart.forEach(item=>{
     const ck=item._choiceKey||'';
     const choiceTag=item.choices&&item.choices.length>0
-      ?item.choices.map(c=>`<span class="cart-choice-tag">🔸 ${esc(c.label||c.compLabel||'')}: ${esc(c.name||'')}</span>`).join('')
-      :'';
+      ?item.choices.map(c=>`<span class="cart-choice-tag">🔸 ${esc(c.label||c.compLabel||'')}: ${esc(c.name||'')}${c.temp?' ('+esc(c.temp)+')':''}</span>`).join('')
+      :(item.temp?`<span class="cart-choice-tag">${tempLabel(item.temp)}</span>`:'');
     const d=document.createElement('div');
     d.className='cart-item';
     const price=Number(item.price)||0;
@@ -2154,6 +2208,12 @@ async function confirmPayment(){
     const proceed=confirm(`バザー券が商品代金より ¥${over.toLocaleString()} 多いです。この分はお返しできません。\n\nお客様に確認しましたか？よろしければOKを押してください。`);
     if(!proceed) return;
   }
+  {
+    const tn=parseInt(document.getElementById('ticket-num-input')?.value);
+    if(isNaN(tn)&&Object.keys(S.ticketsSnap||{}).length>0){
+      if(!confirm('⚠️ 整理券が選択されていません。\n\n整理券なしで会計しますか？\n（順番管理ができなくなります。戻って整理券を選ぶ場合は「キャンセル」）')) return;
+    }
+  }
   const cashNeeded=Math.max(0,total-vt);
   const cash=parseInt(document.getElementById('cash-input').value)||0;
   const change=cash-cashNeeded;
@@ -2168,18 +2228,29 @@ async function confirmPayment(){
   const order={
     id:Date.now(),orderNum,dayId:S.currentDay.id,
     timestamp:new Date().toISOString(),
-    items:S.cart.map(i=>({id:i.id,name:i.name,price:i.price,qty:i.qty,...(i.choices?{choices:i.choices}:{})})),
+    items:S.cart.map(i=>({id:i.id,name:i.name,price:i.price,qty:i.qty,...(i.choices?{choices:i.choices}:{}),...(i.temp?{temp:i.temp}:{})})),
     total,payment:cash,change,status:'pending',
     ticketNum:ticketNum,
     vouchers:vouchersUsed,voucherTotal:vt,
   };
+  // ドリンクは調理不要: 中身のチェックを最初から入れる。ドリンクだけの注文は調理を飛ばして受け渡しへ
+  {
+    const lines=orderLines(order).flatMap(g=>g.lines);
+    const done={};
+    lines.forEach(l=>{ if(l.drink) done[l.key]=true; });
+    if(Object.keys(done).length>0) order.itemsDone=done;
+    if(lines.length>0&&lines.every(l=>l.drink)){
+      order.status='cooked';
+      order.cookedAt=order.timestamp;
+    }
+  }
   showLoading(true);
   try{
     await db.ref(`${ROOT}/orders/${order.id}`).set(order);
     // 整理券を「使用中」に更新
     if(ticketNum!=null){
       const tk=Object.values(S.ticketsSnap).find(t=>t.num===ticketNum);
-      if(tk) await db.ref(`${ROOT}/tickets/${tk.id}`).update({status:'in_use',orderId:order.id});
+      if(tk) await db.ref(`${ROOT}/tickets/${tk.id}`).update({status:order.status==='cooked'?'called':'in_use',orderId:order.id});
     }
     for(const ci of S.cart){
       const mi=S.menu[ci.id];
@@ -2253,11 +2324,12 @@ function renderOrderTicketCard(order,opts){
   card.innerHTML=`
     <div class="${headerClass}">
       <div>
-        <div class="ticket-num"># ${order.orderNum||'?'}</div>
-        ${order.ticketNum!=null?`<div class="ticket-srq-badge">🎫 整理券 No.${order.ticketNum}</div>`:''}
+        ${order.ticketNum!=null
+          ?`<div class="ticket-big-no"><small>整理券</small>${order.ticketNum}</div>`
+          :`<div class="ticket-big-no none"><small>整理券なし</small># ${order.orderNum||'?'}</div>`}
         ${elapsedHtml}
       </div>
-      <div class="ticket-time">${time}</div>
+      <div class="ticket-time">${time}${order.ticketNum!=null?`<div class="ticket-ordno">注文 #${order.orderNum||'?'}</div>`:''}</div>
     </div>
     <div class="ticket-items">
       ${orderLines(order).map(g=>{
@@ -2269,7 +2341,7 @@ function renderOrderTicketCard(order,opts){
           return `
         <label class="ticket-item-row${ck?' chk':''}${on?' checked':''}${g.setName?' in-set':''}">
           ${ck?`<input type="checkbox" class="item-chk" ${on?'checked':''} onchange="toggleItemCheck('${order.id}','${opts.checkKind}','${ln.key}',this.checked)">`:''}
-          <span class="ticket-item-name">${esc(ln.name)}${cooked?' <small class="cooked-tag">🍳済</small>':''}</span>
+          <span class="ticket-item-name">${esc(ln.name)}${cooked?' <small class="cooked-tag">済</small>':''}${ln.sub?`<span class="ln-sub">${esc(ln.sub)}</span>`:''}</span>
           <span class="ticket-item-qty">× ${ln.qty}</span>
         </label>`;
         }).join('');
@@ -2324,6 +2396,7 @@ function renderKitchen(){
     const card=renderOrderTicketCard(order,{
       isDone:false,
       elapsedFromTs:new Date(order.timestamp).getTime(),
+      compact:true,
       actionLabel:'✓ 調理完了',
       actionFn:'completeCooking',
       checkKind:'itemsDone'
@@ -2369,7 +2442,7 @@ function renderDoneFeed(feedId,doneOrders,tsField,emptyText,doneWord){
       el.className='done-feed-item';
       el.dataset.id=String(order.id);
       el.innerHTML=`
-        <div class="done-feed-num"># ${order.orderNum||'?'}</div>
+        <div class="done-feed-num">${order.ticketNum!=null?'🎫'+order.ticketNum:'#'+(order.orderNum||'?')}</div>
         <div class="done-feed-items">${esc(itemsText)}</div>
         <div class="done-feed-time">${doneWord} ${time}</div>
       `;
@@ -2419,7 +2492,7 @@ function orderLines(order){
     const mi=S.menu[it.id]||S.menu[String(it.id)];
     const comps=mi&&mi.isSet&&Array.isArray(mi.components)?mi.components:null;
     if(!comps||comps.length===0){
-      groups.push({setName:null,lines:[{key:`${i}`,name:it.name,qty:it.qty}]});
+      groups.push({setName:null,lines:[{key:`${i}`,name:it.name,qty:it.qty,sub:it.temp?tempLabel(it.temp):'',drink:isDrinkItem(mi)}]});
       return;
     }
     const lines=[];
@@ -2427,7 +2500,8 @@ function orderLines(order){
     comps.forEach((c,ci)=>{
       if(c.isChoice){
         const ch=(it.choices||[])[choiceIdx++];
-        lines.push({key:`${i}_${ci}`,name:ch?ch.name||ch.label||'':(c.label||'選択'),qty:(c.qty||1)*it.qty});
+        const cref=ch?(S.menu[ch.id]||S.menu[String(ch.id)]):null;
+        lines.push({key:`${i}_${ci}`,name:ch?ch.name||ch.label||'':(c.label||'選択'),qty:(c.qty||1)*it.qty,sub:ch&&ch.temp?tempLabel(ch.temp):'',drink:isDrinkItem(cref)});
       } else {
         const ref=S.menu[c.id]||S.menu[String(c.id)];
         if(ref&&ref.isMaterial){
@@ -2436,7 +2510,7 @@ function orderLines(order){
           matQty=Math.max(matQty,(c.qty||1)*it.qty);
           matNames.push(ref.name);
         } else {
-          lines.push({key:`${i}_${ci}`,name:ref?ref.name:'(削除済み)',qty:(c.qty||1)*it.qty});
+          lines.push({key:`${i}_${ci}`,name:ref?ref.name:'(削除済み)',qty:(c.qty||1)*it.qty,drink:isDrinkItem(ref)});
         }
       }
     });
@@ -3110,6 +3184,7 @@ async function setStock(id){
 //  MENU MANAGEMENT
 function showMenuAddModal(){
   S.editingMenuId=null;
+  document.getElementById('e-is-drink').checked=false;
   document.getElementById('menu-edit-title').textContent='📋 商品を追加';
   ['e-name','e-price','e-cat'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('e-stock').value='0';
@@ -3126,6 +3201,7 @@ function showMenuEditModal(id){
   document.getElementById('e-price').value=item.price||0;
   document.getElementById('e-cat').value=item.category||'';
   document.getElementById('e-stock').value=item.stock||0;
+  document.getElementById('e-is-drink').checked=isDrinkItem(item);
   document.getElementById('e-components-list').innerHTML='';
   const mode=item.isSet?'set':item.isMaterial?'material':'normal';
   document.querySelectorAll('input[name="e-item-mode"]').forEach(r=>r.checked=false);
@@ -3145,8 +3221,13 @@ function showMenuEditModal(id){
 }
 function closeMenuEditModal(){document.getElementById('menu-edit-modal-overlay').classList.remove('show');}
 
+function autoDrinkFromCat(){
+  const c=document.getElementById('e-cat').value;
+  if(/ドリンク|飲み物|drink/i.test(c)) document.getElementById('e-is-drink').checked=true;
+}
 function updateMenuMode(){
   const mode=document.querySelector('input[name="e-item-mode"]:checked')?.value||'normal';
+  const dg=document.getElementById('e-drink-group'); if(dg) dg.style.display=(mode==='set'||mode==='material')?'none':'flex';
   document.getElementById('e-price-group').style.display=mode==='material'?'none':'block';
   document.getElementById('e-stock-group').style.display=mode==='set'?'none':'block';
   document.getElementById('e-set-group').style.display=mode==='set'?'block':'none';
@@ -3286,7 +3367,8 @@ async function saveMenuItem(){
 
   showLoading(true);
   try{
-    const data={name,price,category,stock:isSet?0:stock,currentStock:isSet?0:stock,active:true,isSet,isMaterial};
+    const isDrink=(!isSet&&!isMaterial)&&document.getElementById('e-is-drink').checked;
+    const data={name,price,category,stock:isSet?0:stock,currentStock:isSet?0:stock,active:true,isSet,isMaterial,isDrink};
     if(isSet) data.components=components;
     if(S.editingMenuId){
       const prev=S.menu[S.editingMenuId]||{};
@@ -3388,8 +3470,18 @@ async function cancelOrder(orderId){
 
 //  CHOICE MODAL
 let _choiceItem=null;
+function tempRadiosHtml(name,hidden){
+  return `<span class="temp-opts" style="${hidden?'display:none;':''}">${TEMP_OPTS.map(([t,ic])=>`<label class="temp-opt"><input type="radio" name="${name}" value="${t}"><span>${ic} ${t}</span></label>`).join('')}</span>`;
+}
 function showChoiceModal(item){
   _choiceItem=item;
+  // 単品ドリンク: 常温/冷蔵だけ選ぶ
+  if(!item.isSet){
+    document.getElementById('choice-modal-title').textContent=`🥤 ${esc(item.name)}`;
+    document.getElementById('choice-modal-content').innerHTML=`<div style="font-size:14px;font-weight:800;margin-bottom:8px;">温度を選んでください</div><div class="temp-big">${TEMP_OPTS.map(([t,ic])=>`<label class="temp-opt big"><input type="radio" name="temp-single" value="${t}"><span>${ic} ${t}</span></label>`).join('')}</div>`;
+    document.getElementById('choice-modal-overlay').classList.add('show');
+    return;
+  }
   document.getElementById('choice-modal-title').textContent=`🔸 ${esc(item.name)} のオプション`;
   const choiceComps=(item.components||[]).filter(c=>c.isChoice);
   let html='';
@@ -3402,16 +3494,27 @@ function showChoiceModal(item){
       const hasStock=choiceItem.stock>0;
       const cur=hasStock?(choiceItem.currentStock!=null?choiceItem.currentStock:choiceItem.stock):null;
       const isOut=hasStock&&cur<=0;
-      html+=`<label class="choice-opt${isOut?' out':''}">
-        <input type="radio" name="choice-${ci}" value="${cid}" data-comp-idx="${ci}" data-comp-label="${esc(comp.label||'')}" data-name="${esc(choiceItem.name)}" ${isOut?'disabled':''} style="accent-color:var(--primary);width:18px;height:18px;flex-shrink:0;">
-        <span class="choice-opt-name">${esc(choiceItem.name)}</span>
-        ${hasStock?`<span class="choice-opt-stock">${isOut?'在庫切れ':`残${cur}`}</span>`:''}
-      </label>`;
+      const dr=isDrinkItem(choiceItem);
+      html+=`<div class="choice-opt${isOut?' out':''}" style="flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:10px;flex:1;min-width:120px;cursor:pointer;">
+          <input type="radio" name="choice-${ci}" value="${cid}" data-comp-idx="${ci}" data-comp-label="${esc(comp.label||'')}" data-name="${esc(choiceItem.name)}" data-drink="${dr?1:0}" ${isOut?'disabled':''} onchange="onChoicePick(${ci})" style="accent-color:var(--primary);width:18px;height:18px;flex-shrink:0;">
+          <span class="choice-opt-name">${esc(choiceItem.name)}</span>
+          ${hasStock?`<span class="choice-opt-stock">${isOut?'在庫切れ':`残${cur}`}</span>`:''}
+        </label>
+        ${dr?tempRadiosHtml(`temp-${ci}-${cid}`,true):''}
+      </div>`;
     });
     html+=`</div>`;
   });
   document.getElementById('choice-modal-content').innerHTML=html;
   document.getElementById('choice-modal-overlay').classList.add('show');
+}
+// 選んだドリンクの温度ボタンだけ表示
+function onChoicePick(ci){
+  document.querySelectorAll(`input[name="choice-${ci}"]`).forEach(r=>{
+    const box=r.closest('.choice-opt'); const t=box&&box.querySelector('.temp-opts');
+    if(t) t.style.display=r.checked?'inline-flex':'none';
+  });
 }
 function closeChoiceModal(){
   document.getElementById('choice-modal-overlay').classList.remove('show');
@@ -3419,13 +3522,27 @@ function closeChoiceModal(){
 }
 function confirmChoice(){
   if(!_choiceItem) return;
+  if(!_choiceItem.isSet){
+    const t=document.querySelector('input[name="temp-single"]:checked');
+    if(!t){showToast('常温か冷蔵を選んでください','error');return;}
+    const it=_choiceItem;
+    closeChoiceModal();
+    addToCartWithTemp(it,t.value);
+    return;
+  }
   const choiceComps=(_choiceItem.components||[]).filter(c=>c.isChoice);
   const choices=[];
   for(let ci=0;ci<choiceComps.length;ci++){
     const comp=choiceComps[ci];
     const sel=document.querySelector(`input[name="choice-${ci}"]:checked`);
     if(!sel){showToast(`「${esc(comp.label||'オプション')}」を選択してください`,'error');return;}
-    choices.push({id:sel.value,name:sel.dataset.name||'',label:sel.dataset.compLabel||comp.label||'',compLabel:comp.label||''});
+    const ch={id:sel.value,name:sel.dataset.name||'',label:sel.dataset.compLabel||comp.label||'',compLabel:comp.label||''};
+    if(sel.dataset.drink==='1'){
+      const tr=document.querySelector(`input[name="temp-${ci}-${sel.value}"]:checked`);
+      if(!tr){showToast(`「${esc(ch.name)}」は常温か冷蔵を選んでください`,'error');return;}
+      ch.temp=tr.value;
+    }
+    choices.push(ch);
   }
   const choiceTarget=_choiceItem;
   closeChoiceModal();
@@ -3610,6 +3727,7 @@ document.addEventListener('keydown',e=>{
 function startApp(){
   setupListeners();
   showScreen('role');
+  restoreScreen();
 }
 
 
