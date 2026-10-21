@@ -1236,7 +1236,7 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 
     <!-- セット商品：構成品選択 -->
     <div id="e-set-group" style="display:none;">
-      <div style="font-size:13px;font-weight:800;color:#374151;margin-bottom:8px;">構成品 <span style="color:var(--danger)">*</span></div>
+      <div id="e-comp-title" style="font-size:13px;font-weight:800;color:#374151;margin-bottom:8px;">構成品 <span style="color:var(--danger)">*</span></div>
       <div id="e-components-list" style="background:#f8faff;border-radius:10px;padding:10px;margin-bottom:8px;min-height:48px;"></div>
       <button type="button" class="btn btn-ghost" style="width:100%;justify-content:center;" onclick="addComponentRow()">＋ 構成品を追加</button>
       <p style="font-size:11px;color:var(--gray);margin-top:7px;">在庫はセットの売上に応じて構成品から自動的に減ります</p>
@@ -1622,11 +1622,11 @@ function renderPosMenuContent(){
       let stockStr=hasStock?`在庫:${cur}個`:'在庫管理なし';
       if(item.isSet){
         const avail=getSetAvailability(item);
-        stockStr=avail!=null?`セット残り:${avail}個`:'在庫管理なし';
+        stockStr=avail!=null?`${isSetItem(item)?'セット残り':'構成品から計算 残り'}:${avail}個`:'在庫管理なし';
       }
       html+=`<div class="menu-row">
         <div class="menu-row-info">
-          <div class="menu-row-name" style="${!isActive?'color:var(--gray);':''}">${item.isSet?'📦 ':''}${esc(item.name)}</div>
+          <div class="menu-row-name" style="${!isActive?'color:var(--gray);':''}">${isSetItem(item)?'📦 ':''}${esc(item.name)}</div>
           <div class="menu-row-sub">¥${item.price.toLocaleString()}${item.category?' / '+item.category:''} / ${stockStr}</div>
         </div>
         <label class="toggle-switch"><input type="checkbox" ${isActive?'checked':''} onchange="toggleItem(${JSON.stringify(item.id).replace(/"/g,'&quot;')},this.checked)"><span class="toggle-slider"></span></label>
@@ -1905,14 +1905,14 @@ function renderMenu(){
     let isOut=false,isLow=false,stockLabel='';
     if(item.isSet){
       const avail=getSetAvailability(item);
-      if(avail!==null){isOut=avail<=0;isLow=avail>0&&avail<=3;stockLabel=isOut?'在庫切れ':`残り ${avail} セット`;}
+      if(avail!==null){isOut=avail<=0;isLow=avail>0&&avail<=3;stockLabel=isOut?'在庫切れ':`残り ${avail} ${isSetItem(item)?'セット':'個'}`;}
     }else{
       const hasStock=item.stock>0;
       const cur=hasStock?(item.currentStock!=null?item.currentStock:item.stock):null;
       if(hasStock){isOut=cur<=0;isLow=cur>0&&cur<=5;stockLabel=isOut?'在庫切れ':`残り ${cur} 個`;}
     }
     const btn=document.createElement('button');
-    btn.className='menu-btn'+(item.isSet?' is-set':'')+(isOut?' out-of-stock':isLow?' low-stock':'');
+    btn.className='menu-btn'+(isSetItem(item)?' is-set':'')+(isOut?' out-of-stock':isLow?' low-stock':'');
     btn.disabled=isOut;
     btn.onclick=()=>addToCart(item);
     btn.innerHTML=`<div class="mname">${esc(item.name)}</div><div class="mprice">¥${item.price.toLocaleString()}</div>${stockLabel?`<div class="mstock">${stockLabel}</div>`:''}`;
@@ -1928,8 +1928,8 @@ function renderMenu(){
   const base=S.selCat==='all'?all:all.filter(i=>(i.category||'')===S.selCat);
   if(base.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>このカテゴリの商品はありません</p></div>`;return;}
   const sections=[
-    ['セット','set',base.filter(i=>i.isSet)],
-    ['単品','single',base.filter(i=>!i.isSet&&!isDrinkItem(i))],
+    ['セット','set',base.filter(i=>isSetItem(i))],
+    ['単品','single',base.filter(i=>!isSetItem(i)&&!isDrinkItem(i))],
     ['ドリンク','drink',base.filter(i=>isDrinkItem(i))],
   ];
   sections.forEach(([label,cls,items])=>{
@@ -1943,10 +1943,12 @@ function renderMenu(){
   });
 }
 
+//  種別: 単品でも構成品（バンズ・パティ等）を持てる。isSet=構成品あり(在庫連動)、displayType==='single' なら見た目は単品
+function isSetItem(i){return !!(i&&i.isSet)&&i.displayType!=='single';}
 //  DRINK
 const DRINK_NAME_RE=/ドリンク|飲み物|ジュース|茶|コーラ|ファンタ|サイダー|ソーダ|ラムネ|コーヒー|珈琲|カルピス|レモネード|ウォーター|スポーツ|オレンジ|グレープ|アップル|ミネラル|水$/;
 function isDrinkItem(mi){
-  if(!mi||mi.isSet) return false;
+  if(!mi||isSetItem(mi)) return false;
   if(mi.isDrink===true||mi.isDrink===false) return mi.isDrink;       // 管理画面で明示した設定が最優先
   if(/ドリンク|飲み物|drink/i.test(mi.category||'')) return true;
   if(DRINK_NAME_RE.test(mi.name||'')) return true;
@@ -1980,7 +1982,8 @@ function addToCartWithTemp(item,temp){
   const key='t:'+temp;
   const ex=S.cart.find(c=>c.id===item.id&&c._choiceKey===key);
   if(ex){
-    if(item.stock>0&&ex.qty>=(item.currentStock!=null?item.currentStock:item.stock)){showToast('在庫が足りません','error');return;}
+    const av=item.isSet?getSetAvailability(item):(item.stock>0?(item.currentStock!=null?item.currentStock:item.stock):null);
+    if(av!==null&&ex.qty>=av){showToast('在庫が足りません','error');return;}
     ex.qty++;
   } else S.cart.push({...item,qty:1,temp,_choiceKey:key});
   renderCart();
@@ -2516,7 +2519,7 @@ function orderLines(order){
   const groups=[];
   (order.items||[]).forEach((it,i)=>{
     const mi=S.menu[it.id]||S.menu[String(it.id)];
-    const comps=mi&&mi.isSet&&Array.isArray(mi.components)?mi.components:null;
+    const comps=mi&&isSetItem(mi)&&Array.isArray(mi.components)?mi.components:null;
     if(!comps||comps.length===0){
       groups.push({setName:null,lines:[{key:`${i}`,name:it.name,qty:it.qty,sub:it.temp?tempLabel(it.temp):'',drink:isDrinkItem(mi)}]});
       return;
@@ -3015,12 +3018,12 @@ function renderSettingsContent(){
       const isActive=item.active!==false;
       const hasStock=item.stock>0;
       const cur=hasStock?(item.currentStock!=null?item.currentStock:item.stock):null;
-      const setTag=item.isSet?'<span style="font-size:10px;background:#ede9fe;color:#7c3aed;border-radius:4px;padding:1px 5px;font-weight:700;">セット</span> ':'';
+      const setTag=isSetItem(item)?'<span style="font-size:10px;background:#ede9fe;color:#7c3aed;border-radius:4px;padding:1px 5px;font-weight:700;">セット</span> ':'';
       const matTag=item.isMaterial?'<span style="font-size:10px;background:#fef9c3;color:#92400e;border-radius:4px;padding:1px 5px;font-weight:700;">レジ非表示</span> ':'';
       html+=`<div class="menu-row">
         <div class="menu-row-info">
           <div class="menu-row-name" style="${!isActive?'color:var(--gray);':''}">${setTag}${matTag}${esc(item.name)}</div>
-          <div class="menu-row-sub">¥${item.price.toLocaleString()}${item.category?' / '+esc(item.category):''} / ${item.isSet?'セット':hasStock?`在庫:${cur}個`:'在庫管理なし'}</div>
+          <div class="menu-row-sub">¥${item.price.toLocaleString()}${item.category?' / '+esc(item.category):''} / ${isSetItem(item)?'セット':item.isSet?'構成品から在庫計算':hasStock?`在庫:${cur}個`:'在庫管理なし'}</div>
         </div>
         <label class="toggle-switch"><input type="checkbox" ${isActive?'checked':''} onchange="toggleItem(${JSON.stringify(item.id).replace(/"/g,'&quot;')},this.checked)"><span class="toggle-slider"></span></label>
         <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="showMenuEditModal(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">✏️</button>
@@ -3229,12 +3232,12 @@ function showMenuEditModal(id){
   document.getElementById('e-stock').value=item.stock||0;
   document.getElementById('e-is-drink').checked=isDrinkItem(item);
   document.getElementById('e-components-list').innerHTML='';
-  const mode=item.isSet?'set':item.isMaterial?'material':'normal';
+  const mode=isSetItem(item)?'set':item.isMaterial?'material':'normal';
   document.querySelectorAll('input[name="e-item-mode"]').forEach(r=>r.checked=false);
   const radio=document.querySelector(`input[name="e-item-mode"][value="${mode}"]`);
   if(radio) radio.checked=true;
   updateMenuMode();
-  if(item.isSet&&item.components){
+  if(item.components&&item.components.length){
     item.components.forEach(comp=>{
       if(comp.isChoice){
         addComponentRow(true,{label:comp.label,choiceIds:(comp.choiceIds||[]).map(String),qty:comp.qty||1});
@@ -3258,7 +3261,9 @@ function updateMenuMode(){
   const dg=document.getElementById('e-drink-group'); if(dg) dg.style.display=(mode==='set')?'none':'flex';
   document.getElementById('e-price-group').style.display=mode==='material'?'none':'block';
   document.getElementById('e-stock-group').style.display=mode==='set'?'none':'block';
-  document.getElementById('e-set-group').style.display=mode==='set'?'block':'none';
+  document.getElementById('e-set-group').style.display=(mode==='set'||mode==='normal')?'block':'none';
+  const ct=document.getElementById('e-comp-title');
+  if(ct) ct.innerHTML=mode==='set'?'構成品 <span style="color:var(--danger)">*</span>':'構成品（任意）<span style="font-weight:500;font-size:11px;color:var(--gray);"> 例: ハンバーガー = バンズ＋パティ＋ピクルス。入れると在庫が連動し、単品のまま販売できます</span>';
   const mn=document.getElementById('e-material-note');
   if(mn) mn.style.display=mode==='material'?'block':'none';
   ['mode-normal-label','mode-set-label','mode-material-label'].forEach(lbl=>{
@@ -3374,33 +3379,38 @@ async function saveMenuItem(){
   const isSet=mode==='set';
   const isMaterial=mode==='material';
   let components=[];
-
-  if(isSet){
-    const rows=document.querySelectorAll('#e-components-list > div');
-    for(const row of rows){
+  const readComps=()=>{
+    const out=[];
+    document.querySelectorAll('#e-components-list > div').forEach(row=>{
       const isChoice=row.querySelector('.comp-is-choice')?.value==='true';
       if(isChoice){
         const label=row.querySelector('.comp-choice-label')?.value.trim()||'ドリンク';
         const choiceIds=[...row.querySelectorAll('.comp-choice-item:checked')].map(cb=>cb.dataset.id);
         const choiceQty=parseInt(row.querySelector('.comp-qty-input')?.value)||1;
-        if(choiceIds.length>0) components.push({isChoice:true,label,choiceIds,qty:choiceQty});
+        if(choiceIds.length>0) out.push({isChoice:true,label,choiceIds,qty:choiceQty});
       }else{
         const id=row.querySelector('.comp-item-select')?.value;
         const qty=parseInt(row.querySelector('.comp-qty-input')?.value)||1;
-        if(id) components.push({id,qty});
+        if(id) out.push({id,qty});
       }
-    }
-    if(components.length===0){showToast('構成品を1つ以上追加してください','error');return;}
-  }
+    });
+    return out;
+  };
+
+  if(mode!=='material') components=readComps();
+  if(mode==='set'&&components.length===0){showToast('構成品を1つ以上追加してください','error');return;}
+  // 構成品を持つ = 在庫連動。単品でも構成品を持てる（見た目は単品のまま）
+  const composite=(mode==='set'||mode==='normal')&&components.length>0;
 
   showLoading(true);
   try{
     const isDrink=!isSet&&document.getElementById('e-is-drink').checked;
-    const data={name,price,category,stock:isSet?0:stock,currentStock:isSet?0:stock,active:true,isSet,isMaterial,isDrink};
-    if(isSet) data.components=components;
+    const data={name,price,category,stock:composite?0:stock,currentStock:composite?0:stock,active:true,isSet:composite,isMaterial,isDrink,
+      displayType:mode==='set'?'set':(composite?'single':'')};
+    data.components=composite?components:[];
     if(S.editingMenuId){
       const prev=S.menu[S.editingMenuId]||{};
-      if(!isSet){
+      if(!composite){
         const curStock=stock!==(prev.stock||0)?stock:(prev.currentStock!=null?prev.currentStock:stock);
         data.currentStock=curStock;
       }
@@ -3504,7 +3514,7 @@ function tempRadiosHtml(name,hidden){
 function showChoiceModal(item){
   _choiceItem=item;
   // 単品ドリンク: 常温/冷蔵だけ選ぶ
-  if(!item.isSet){
+  if(isDrinkItem(item)&&!(item.components||[]).some(c=>c.isChoice)){
     document.getElementById('choice-modal-title').textContent=`🥤 ${esc(item.name)}`;
     document.getElementById('choice-modal-content').innerHTML=`<div style="font-size:14px;font-weight:800;margin-bottom:8px;">温度を選んでください</div><div class="temp-big">${TEMP_OPTS.map(([t,ic])=>`<label class="temp-opt big"><input type="radio" name="temp-single" value="${t}"><span>${ic} ${t}</span></label>`).join('')}</div>`;
     document.getElementById('choice-modal-overlay').classList.add('show');
@@ -3550,7 +3560,7 @@ function closeChoiceModal(){
 }
 function confirmChoice(){
   if(!_choiceItem) return;
-  if(!_choiceItem.isSet){
+  if(isDrinkItem(_choiceItem)&&!(_choiceItem.components||[]).some(c=>c.isChoice)){
     const t=document.querySelector('input[name="temp-single"]:checked');
     if(!t){showToast('常温か冷蔵を選んでください','error');return;}
     const it=_choiceItem;
