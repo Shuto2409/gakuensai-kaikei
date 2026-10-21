@@ -296,18 +296,24 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 .temp-opt{display:inline-flex;align-items:center;cursor:pointer;}
 .temp-opt input{display:none;}
 .temp-opt span{padding:5px 12px;border:2px solid var(--border);border-radius:999px;font-size:13px;font-weight:800;background:#fff;}
-.temp-opt input:checked+span{background:#0ea5e9;color:#fff;border-color:#0ea5e9;}
+.temp-opt.room span{border-color:#fdba74;color:#c2410c;}
+.temp-opt.cold span{border-color:#93c5fd;color:#1d4ed8;}
+.temp-opt.room input:checked+span{background:#f97316;color:#fff;border-color:#f97316;}
+.temp-opt.cold input:checked+span{background:#2563eb;color:#fff;border-color:#2563eb;}
+.temp-badge{display:inline-block;font-size:11px;font-weight:800;padding:1px 8px;border-radius:999px;color:#fff;}
+.temp-badge.room{background:#f97316;}
+.temp-badge.cold{background:#2563eb;}
 .temp-big{display:flex;gap:10px;}
 .temp-opt.big{flex:1;}
 .temp-opt.big span{display:block;width:100%;text-align:center;padding:16px 8px;font-size:17px;border-radius:14px;}
-.ln-sub{display:block;font-size:11px;font-weight:700;color:#0369a1;margin-top:1px;}
+.ln-sub{display:block;margin-top:2px;}
 /* 注文カード: 整理券を大きく / 全カード同じ大きさ */
 .ticket-big-no{font-size:38px;font-weight:900;line-height:1;letter-spacing:-1px;display:flex;align-items:baseline;gap:6px;}
 .ticket-big-no small{font-size:11px;font-weight:800;letter-spacing:0;opacity:.85;}
 .ticket-big-no.none{font-size:26px;}
 .ticket-ordno{font-size:10px;opacity:.8;margin-top:2px;font-weight:700;}
-#kitchen-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))!important;gap:10px;grid-auto-rows:260px;}
-.compact-grid{grid-auto-rows:260px;}
+#kitchen-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))!important;gap:10px;grid-auto-rows:300px;}
+.compact-grid{grid-auto-rows:300px;}
 .order-ticket{height:100%;min-height:0;}
 .order-ticket .ticket-items{overflow-y:auto;min-height:0;}
 .order-ticket.compact .ticket-big-no{font-size:30px;}
@@ -1956,8 +1962,10 @@ function isDrinkItem(mi){
   const id=String(mi.id);
   return Object.values(S.menu||{}).some(m=>m.isSet&&(m.components||[]).some(c=>c.isChoice&&/ドリンク|飲/.test(c.label||'')&&(c.choiceIds||[]).map(String).includes(id)));
 }
-const TEMP_OPTS=[['常温','🌡️'],['冷蔵','🧊']];
-function tempLabel(t){return t?((t==='冷蔵'?'🧊 ':'🌡️ ')+t):'';}
+const TEMP_OPTS=[['常温','room'],['冷蔵','cold']];
+function tempLabel(t){return t||'';}
+// 温度は色つきの小さなバッジで表示（常温=橙 / 冷蔵=青）
+function tempBadge(t){return t?`<span class="temp-badge ${t==='冷蔵'?'cold':'room'}">${esc(t)}</span>`:'';}
 
 //  CART
 function addToCart(item){
@@ -2044,8 +2052,8 @@ function renderCart(){
   S.cart.forEach(item=>{
     const ck=item._choiceKey||'';
     const choiceTag=item.choices&&item.choices.length>0
-      ?item.choices.map(c=>`<span class="cart-choice-tag">🔸 ${esc(c.label||c.compLabel||'')}: ${esc(c.name||'')}${c.temp?' ('+esc(c.temp)+')':''}</span>`).join('')
-      :(item.temp?`<span class="cart-choice-tag">${tempLabel(item.temp)}</span>`:'');
+      ?item.choices.map(c=>`<span class="cart-choice-tag">🔸 ${esc(c.label||c.compLabel||'')}: ${esc(c.name||'')}${c.temp?' '+tempBadge(c.temp):''}</span>`).join('')
+      :(item.temp?`<span class="cart-choice-tag">${tempBadge(item.temp)}</span>`:'');
     const d=document.createElement('div');
     d.className='cart-item';
     const price=Number(item.price)||0;
@@ -2370,7 +2378,7 @@ function renderOrderTicketCard(order,opts){
           return `
         <label class="ticket-item-row${ck?' chk':''}${on?' checked':''}${g.setName?' in-set':''}">
           ${ck?`<input type="checkbox" class="item-chk" ${on?'checked':''} onchange="toggleItemCheck('${order.id}','${opts.checkKind}','${ln.key}',this.checked)">`:''}
-          <span class="ticket-item-name">${esc(ln.name)}${cooked?' <small class="cooked-tag">済</small>':''}${ln.sub?`<span class="ln-sub">${esc(ln.sub)}</span>`:''}</span>
+          <span class="ticket-item-name">${esc(ln.name)}${cooked?' <small class="cooked-tag">済</small>':''}${ln.sub?`<span class="ln-sub">${tempBadge(ln.sub)}</span>`:''}</span>
           <span class="ticket-item-qty">× ${ln.qty}</span>
         </label>`;
         }).join('');
@@ -3509,14 +3517,14 @@ async function cancelOrder(orderId){
 //  CHOICE MODAL
 let _choiceItem=null;
 function tempRadiosHtml(name,hidden){
-  return `<span class="temp-opts" style="${hidden?'display:none;':''}">${TEMP_OPTS.map(([t,ic])=>`<label class="temp-opt"><input type="radio" name="${name}" value="${t}"><span>${ic} ${t}</span></label>`).join('')}</span>`;
+  return `<span class="temp-opts" style="${hidden?'display:none;':''}">${TEMP_OPTS.map(([t,k])=>`<label class="temp-opt ${k}"><input type="radio" name="${name}" value="${t}"><span>${t}</span></label>`).join('')}</span>`;
 }
 function showChoiceModal(item){
   _choiceItem=item;
   // 単品ドリンク: 常温/冷蔵だけ選ぶ
   if(isDrinkItem(item)&&!(item.components||[]).some(c=>c.isChoice)){
     document.getElementById('choice-modal-title').textContent=`🥤 ${esc(item.name)}`;
-    document.getElementById('choice-modal-content').innerHTML=`<div style="font-size:14px;font-weight:800;margin-bottom:8px;">温度を選んでください</div><div class="temp-big">${TEMP_OPTS.map(([t,ic])=>`<label class="temp-opt big"><input type="radio" name="temp-single" value="${t}"><span>${ic} ${t}</span></label>`).join('')}</div>`;
+    document.getElementById('choice-modal-content').innerHTML=`<div style="font-size:14px;font-weight:800;margin-bottom:8px;">温度を選んでください</div><div class="temp-big">${TEMP_OPTS.map(([t,k])=>`<label class="temp-opt big ${k}"><input type="radio" name="temp-single" value="${t}"><span>${t}</span></label>`).join('')}</div>`;
     document.getElementById('choice-modal-overlay').classList.add('show');
     return;
   }
