@@ -271,6 +271,26 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 .kt-empty{padding:20px 14px;text-align:center;color:#94a3b8;font-size:12px;font-weight:600;}
 
 
+/* POSレジ風メニュー: 段ごとに同じ大きさのタイル */
+#menu-grid{display:flex;flex-direction:column;gap:10px;}
+.pos-sec{display:flex;gap:8px;align-items:stretch;}
+.pos-sec-label{width:52px;flex-shrink:0;border-radius:12px;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;letter-spacing:0;font-size:13px;font-weight:900;color:#fff;}
+.pos-sec.set .pos-sec-label{background:#7c3aed;}
+.pos-sec.single .pos-sec-label{background:#d97706;}
+.pos-sec.drink .pos-sec-label{background:#0284c7;}
+.pos-tiles{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));grid-auto-rows:84px;gap:8px;}
+.menu-btn.pos-tile{padding:6px 6px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;height:100%;min-width:0;}
+.menu-btn.pos-tile .mname{font-size:13px;margin:0;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.menu-btn.pos-tile .mprice{font-size:16px;}
+.menu-btn.pos-tile .mstock{font-size:10px;margin:0;}
+.pos-sec.set .menu-btn.pos-tile{border-color:#c4b5fd;background:#faf5ff;}
+.pos-sec.single .menu-btn.pos-tile{border-color:#fcd34d;background:#fffbeb;}
+.pos-sec.drink .menu-btn.pos-tile{border-color:#7dd3fc;background:#f0f9ff;}
+.menu-btn.pos-tile:hover:not(.out-of-stock){transform:none;}
+.menu-btn.pos-tile.out-of-stock{opacity:.4;}
+.menu-btn.pos-tile.low-stock{border-color:#f59e0b;}
+@media(max-width:480px){.pos-tiles{grid-template-columns:repeat(2,1fr);}.pos-sec-label{width:36px;font-size:12px;}}
+
 /* ドリンク温度 */
 .temp-opts{display:inline-flex;gap:6px;}
 .temp-opt{display:inline-flex;align-items:center;cursor:pointer;}
@@ -1858,6 +1878,10 @@ function renderCategoryFilter(){
   const cats=[...new Set(Object.values(S.menu).filter(i=>!i.isMaterial).map(i=>i.category).filter(Boolean))];
   const el=document.getElementById('cat-filter');
   if(!el) return;
+  const area=document.getElementById('cashier-menu-area');
+  // カテゴリが1つも無いときは左のカテゴリ欄ごと隠してメニューを広く使う
+  el.style.display=cats.length===0?'none':'';
+  if(area) area.style.gridTemplateColumns=cats.length===0?'1fr':'';
   el.innerHTML=`<button class="cat-btn ${S.selCat==='all'?'active':''}" onclick="filterCat('all')" data-c="all">すべて</button>`;
   cats.forEach(c=>{el.innerHTML+=`<button class="cat-btn ${S.selCat===c?'active':''}" onclick="filterCat(this.dataset.c)" data-c="${esc(c)}">${esc(c)}</button>`;});
 }
@@ -1892,44 +1916,27 @@ function renderMenu(){
   };
 
   grid.innerHTML='';
-
-  if(S.selCat==='all'){
-    // カテゴリごとにグループ化して表示
-    const grouped=new Map();
-    all.forEach(item=>{
-      const cat=item.category||'その他';
-      if(!grouped.has(cat)) grouped.set(cat,[]);
-      grouped.get(cat).push(item);
-    });
-    // カテゴリあり→アルファベット順、「その他」を末尾に
-    const keys=[...grouped.keys()].filter(k=>k!=='その他').sort();
-    if(grouped.has('その他')) keys.push('その他');
-    if(keys.length===0){
-      grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>メニューがありません<br>管理画面から追加してください</p></div>`;
-      return;
-    }
-    const showHdr=keys.length>1||(keys.length===1&&keys[0]!=='その他');
-    keys.forEach(cat=>{
-      if(showHdr){
-        const hdr=document.createElement('div');
-        hdr.className='cat-section-hdr';
-        hdr.textContent=cat;
-        grid.appendChild(hdr);
-      }
-      const row=document.createElement('div');
-      row.className='menu-grid-inner';
-      grouped.get(cat).forEach(item=>row.appendChild(mkBtn(item)));
-      grid.appendChild(row);
-    });
-  }else{
-    // 特定カテゴリのみフラット表示
-    const items=all.filter(i=>(i.category||'')=== S.selCat);
-    if(items.length===0){
-      grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>このカテゴリの商品はありません</p></div>`;
-      return;
-    }
-    items.forEach(item=>grid.appendChild(mkBtn(item)));
+  if(all.length===0){
+    grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>メニューがありません<br>管理画面から追加してください</p></div>`;
+    return;
   }
+  // POSレジ風: セット／単品／ドリンクを段に分け、同じ大きさのタイルを並べる
+  const base=S.selCat==='all'?all:all.filter(i=>(i.category||'')===S.selCat);
+  if(base.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>このカテゴリの商品はありません</p></div>`;return;}
+  const sections=[
+    ['セット','set',base.filter(i=>i.isSet)],
+    ['単品','single',base.filter(i=>!i.isSet&&!isDrinkItem(i))],
+    ['ドリンク','drink',base.filter(i=>isDrinkItem(i))],
+  ];
+  sections.forEach(([label,cls,items])=>{
+    if(items.length===0) return;
+    const sec=document.createElement('div');
+    sec.className='pos-sec '+cls;
+    const lb=document.createElement('div');lb.className='pos-sec-label';lb.textContent=label;
+    const tiles=document.createElement('div');tiles.className='pos-tiles';
+    items.forEach(it=>{const b=mkBtn(it);b.classList.add('pos-tile');tiles.appendChild(b);});
+    sec.appendChild(lb);sec.appendChild(tiles);grid.appendChild(sec);
+  });
 }
 
 //  DRINK
