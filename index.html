@@ -295,12 +295,6 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 .order-ticket.compact .ticket-header{padding:8px 12px;flex-shrink:0;}
 .order-ticket .ticket-footer{flex-shrink:0;}
 .compact-grid .kitchen-empty,#kitchen-grid .kitchen-empty{grid-column:1/-1;grid-row:auto;}
-/* 注文画面: セット / 単品 / ドリンクを横並び */
-.menu-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:start;}
-@media(max-width:820px){.menu-cols{grid-template-columns:1fr;}}
-.menu-col-title{font-size:14px;font-weight:900;color:#334155;padding:6px 10px;background:#e2e8f0;border-radius:10px;margin-bottom:10px;text-align:center;}
-.menu-col-list{display:grid;grid-template-columns:1fr;gap:10px;}
-@media(min-width:1500px){.menu-col-list{grid-template-columns:repeat(2,1fr);}}
 
 /* 注文チケット */
 #kitchen-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
@@ -1864,7 +1858,6 @@ function renderCategoryFilter(){
   const cats=[...new Set(Object.values(S.menu).filter(i=>!i.isMaterial).map(i=>i.category).filter(Boolean))];
   const el=document.getElementById('cat-filter');
   if(!el) return;
-  el.style.display='none'; return;
   el.innerHTML=`<button class="cat-btn ${S.selCat==='all'?'active':''}" onclick="filterCat('all')" data-c="all">すべて</button>`;
   cats.forEach(c=>{el.innerHTML+=`<button class="cat-btn ${S.selCat===c?'active':''}" onclick="filterCat(this.dataset.c)" data-c="${esc(c)}">${esc(c)}</button>`;});
 }
@@ -1899,27 +1892,44 @@ function renderMenu(){
   };
 
   grid.innerHTML='';
-  grid.style.display='block';
-  if(all.length===0){
-    grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>メニューがありません<br>管理画面から追加してください</p></div>`;
-    return;
+
+  if(S.selCat==='all'){
+    // カテゴリごとにグループ化して表示
+    const grouped=new Map();
+    all.forEach(item=>{
+      const cat=item.category||'その他';
+      if(!grouped.has(cat)) grouped.set(cat,[]);
+      grouped.get(cat).push(item);
+    });
+    // カテゴリあり→アルファベット順、「その他」を末尾に
+    const keys=[...grouped.keys()].filter(k=>k!=='その他').sort();
+    if(grouped.has('その他')) keys.push('その他');
+    if(keys.length===0){
+      grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>メニューがありません<br>管理画面から追加してください</p></div>`;
+      return;
+    }
+    const showHdr=keys.length>1||(keys.length===1&&keys[0]!=='その他');
+    keys.forEach(cat=>{
+      if(showHdr){
+        const hdr=document.createElement('div');
+        hdr.className='cat-section-hdr';
+        hdr.textContent=cat;
+        grid.appendChild(hdr);
+      }
+      const row=document.createElement('div');
+      row.className='menu-grid-inner';
+      grouped.get(cat).forEach(item=>row.appendChild(mkBtn(item)));
+      grid.appendChild(row);
+    });
+  }else{
+    // 特定カテゴリのみフラット表示
+    const items=all.filter(i=>(i.category||'')=== S.selCat);
+    if(items.length===0){
+      grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>このカテゴリの商品はありません</p></div>`;
+      return;
+    }
+    items.forEach(item=>grid.appendChild(mkBtn(item)));
   }
-  const cols=[
-    ['📦 セット',all.filter(i=>i.isSet)],
-    ['🍟 単品',all.filter(i=>!i.isSet&&!isDrinkItem(i))],
-    ['🥤 ドリンク',all.filter(i=>isDrinkItem(i))],
-  ];
-  const wrap=document.createElement('div');
-  wrap.className='menu-cols';
-  cols.forEach(([title,items])=>{
-    const col=document.createElement('div');
-    const h=document.createElement('div');h.className='menu-col-title';h.textContent=title;
-    const list=document.createElement('div');list.className='menu-col-list';
-    items.forEach(it=>list.appendChild(mkBtn(it)));
-    if(items.length===0) list.innerHTML='<div style="text-align:center;color:#94a3b8;font-size:12px;padding:10px;">なし</div>';
-    col.appendChild(h);col.appendChild(list);wrap.appendChild(col);
-  });
-  grid.appendChild(wrap);
 }
 
 //  DRINK
