@@ -24,7 +24,7 @@ function orderSummaryText(o){
   return (o.items||[]).map(i=>{
     const extra=[];
     if(i.temp) extra.push(i.temp);
-    if(i.choices&&i.choices.length) i.choices.forEach(c=>extra.push(c.name+(c.temp?'('+c.temp+')':'')));
+    if(i.choices&&i.choices.length) i.choices.forEach(c=>extra.push(c.none?(c.label||'')+'なし':c.name+(c.temp?'('+c.temp+')':'')));
     return `${i.name}${extra.length?'［'+extra.join('・')+'］':''}×${i.qty}`;
   }).join('、');
 }
@@ -70,17 +70,18 @@ async function cancelOrder(orderId){
       const mi=S.menu[ci.id]||S.menu[String(ci.id)];
       if(!mi) continue;
       if(mi.isSet&&mi.components){
+        let cIdx=0;
         for(const comp of mi.components){
           if(comp.isChoice){
-            if(ci.choices){
-              for(const choice of ci.choices){
-                const choiceItem=S.menu[choice.id]||S.menu[String(choice.id)];
-                if(choiceItem&&choiceItem.stock>0){
-                  await db.ref(`${ROOT}/menu/${choice.id}/currentStock`).transaction(cur=>{
-                    if(cur===null)return cur;
-                    return cur+(comp.qty||1)*ci.qty;
-                  });
-                }
+            const choice=(ci.choices||[])[cIdx++];
+            if(choice&&!choice.none){
+              const choiceItem=S.menu[choice.id]||S.menu[String(choice.id)];
+              if(choiceItem&&choiceItem.stock>0){
+                const q=choiceQty(comp,choice.id);
+                await db.ref(`${ROOT}/menu/${choice.id}/currentStock`).transaction(cur=>{
+                  if(cur===null)return cur;
+                  return cur+q*ci.qty;
+                });
               }
             }
           }else{
@@ -135,6 +136,11 @@ function showChoiceModal(item){
   choiceComps.forEach((comp,ci)=>{
     html+=`<div style="margin-bottom:16px;">
       <div style="font-size:14px;font-weight:800;color:#1e293b;margin-bottom:8px;">${esc(comp.label||'選択してください')}</div>`;
+    if(comp.optional){
+      html+=`<div class="choice-opt"><label style="display:flex;align-items:center;gap:10px;flex:1;cursor:pointer;">
+        <input type="radio" name="choice-${ci}" value="__none" data-comp-idx="${ci}" data-comp-label="${esc(comp.label||'')}" data-name="なし" data-drink="0" checked onchange="onChoicePick(${ci})" style="accent-color:var(--primary);width:18px;height:18px;flex-shrink:0;">
+        <span class="choice-opt-name">なし</span></label></div>`;
+    }
     (comp.choiceIds||[]).forEach(cid=>{
       const choiceItem=S.menu[cid]||S.menu[String(cid)];
       if(!choiceItem) return;
@@ -146,6 +152,7 @@ function showChoiceModal(item){
         <label style="display:flex;align-items:center;gap:10px;flex:1;min-width:120px;cursor:pointer;">
           <input type="radio" name="choice-${ci}" value="${cid}" data-comp-idx="${ci}" data-comp-label="${esc(comp.label||'')}" data-name="${esc(choiceItem.name)}" data-drink="${dr?1:0}" ${isOut?'disabled':''} onchange="onChoicePick(${ci})" style="accent-color:var(--primary);width:18px;height:18px;flex-shrink:0;">
           <span class="choice-opt-name">${esc(choiceItem.name)}</span>
+          ${comp.extra>0?`<span class="choice-opt-stock" style="background:#fef3c7;color:#b45309;">+${comp.extra}円</span>`:''}
           ${hasStock?`<span class="choice-opt-stock">${isOut?'在庫切れ':`残${cur}`}</span>`:''}
         </label>
         ${dr?tempRadiosHtml(`temp-${ci}-${cid}`,true):''}
@@ -184,6 +191,8 @@ function confirmChoice(){
     const sel=document.querySelector(`input[name="choice-${ci}"]:checked`);
     if(!sel){showToast(`「${esc(comp.label||'オプション')}」を選択してください`,'error');return;}
     const ch={id:sel.value,name:sel.dataset.name||'',label:sel.dataset.compLabel||comp.label||'',compLabel:comp.label||''};
+    if(sel.value==='__none'){ ch.id='none'; ch.none=true; ch.extra=0; }
+    else if(comp.extra>0) ch.extra=Number(comp.extra);
     if(sel.dataset.drink==='1'){
       const tr=document.querySelector(`input[name="temp-${ci}-${sel.value}"]:checked`);
       if(!tr){showToast(`「${esc(ch.name)}」は常温か冷蔵を選んでください`,'error');return;}
