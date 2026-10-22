@@ -55,8 +55,8 @@ function showOrderHistory(){
 }
 function closeOrderHistory(){document.getElementById('history-modal-overlay').classList.remove('show');}
 function requestCancelOrder(orderId){
-  // 誤操作防止: 管理PINを確認してから取り消す
-  showAdminPin(()=>cancelOrder(orderId));
+  // PIN不要（確認ダイアログのみ）。PINが必要なのは管理画面に入るときだけ
+  cancelOrder(orderId);
 }
 async function cancelOrder(orderId){
   const order=S.ordersSnap[orderId];
