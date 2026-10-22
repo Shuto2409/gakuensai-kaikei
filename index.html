@@ -717,7 +717,9 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 .order-ticket.compact .cooked-tag{font-size:9px;}
 .order-ticket.compact .ticket-footer{padding:6px 8px;}
 .order-ticket.compact .complete-btn{padding:7px;font-size:12px;}
-#kitchen-grid,.compact-grid{grid-auto-rows:225px;}
+#kitchen-grid,.compact-grid{grid-auto-rows:auto;}
+.order-ticket{height:auto!important;box-sizing:border-box;}
+.order-ticket .ticket-items{overflow:visible!important;}
 </style>
 </head>
 <body>
@@ -2415,6 +2417,20 @@ function renderOrderTicketCard(order,opts){
   return card;
 }
 
+// 調理・受け渡しの全カードを、一番高いカードに合わせて同じ高さにそろえる（スクロール無し）
+function equalizeTickets(){
+  const cards=[...document.querySelectorAll('#kitchen-grid .order-ticket,#handoff-grid .order-ticket,#handoff-cooking-grid .order-ticket')];
+  if(!cards.length) return;
+  cards.forEach(c=>{c.style.minHeight='';});
+  let max=0;
+  cards.forEach(c=>{
+    if(!c.offsetParent) return;
+    const h=[...c.children].reduce((a,el)=>a+el.offsetHeight,0)+4;
+    if(h>max) max=h;
+  });
+  if(max>0) cards.forEach(c=>{c.style.minHeight=max+'px';});
+}
+window.addEventListener('resize',()=>{try{equalizeTickets();}catch(e){}});
 function renderKitchen(){
   const grid=document.getElementById('kitchen-grid');
   if(!grid) return;
@@ -2461,6 +2477,7 @@ function renderKitchen(){
     });
     grid.appendChild(card);
   });
+  equalizeTickets();
   startElapsedTimer();
 }
 
@@ -2700,6 +2717,7 @@ function renderHandoff(){
       actionFn:'completeHandoff'
     }));
   });
+  equalizeTickets();
   startElapsedTimer();
 }
 
