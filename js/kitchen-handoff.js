@@ -222,16 +222,19 @@ function orderLines(order){
     }
     if(!comps||comps.length===0){
       const dr=isDrinkItem(mi);
-      groups.push({setName:null,lines:[{key:`${i}`,name:it.name,qty:it.qty,sub:it.temp?tempLabel(it.temp):'',drink:dr}]});
+      const tops=(it.choices||[]).filter(c=>!c.none).map(c=>({name:c.name,qty:it.qty,key:`${i}_t`}));
+      groups.push({setName:null,lines:[{key:`${i}`,name:it.name,qty:it.qty,sub:it.temp?tempLabel(it.temp):'',drink:dr}],...(tops.length?{toppings:tops}:{})});
       if(!dr) lastMain=groups.length-1;
       return;
     }
     const lines=[];
-    let choiceIdx=0, matQty=0, matNames=[], matAt=-1;
+    let myTops=null, choiceIdx=0, matQty=0, matNames=[], matAt=-1;
     comps.forEach((c,ci)=>{
       if(c.isChoice){
         const ch=(it.choices||[])[choiceIdx++];
+        if(ch&&ch.none) return;
         const cref=ch?(S.menu[ch.id]||S.menu[String(ch.id)]):null;
+        if(ch&&cref&&isToppingItem(cref)&&!isDrinkItem(cref)){ (myTops=myTops||[]).push({name:ch.name,qty:it.qty,key:`${i}_${ci}`}); return; }
         lines.push({key:`${i}_${ci}`,name:ch?ch.name||ch.label||'':(c.label||'選択'),qty:(c.qty||1)*it.qty,sub:ch&&ch.temp?tempLabel(ch.temp):'',drink:isDrinkItem(cref)});
       } else {
         const ref=S.menu[c.id]||S.menu[String(c.id)];
@@ -259,7 +262,7 @@ function orderLines(order){
     }
     // 同じセットの中でもドリンクは一番下に
     const ordered=[...lines.filter(l=>!l.drink),...lines.filter(l=>l.drink)];
-    groups.push({setName:it.name,setQty:it.qty,lines:ordered});
+    groups.push({setName:it.name,setQty:it.qty,lines:ordered,...(myTops?{toppings:myTops}:{})});
     lastMain=groups.length-1;
   });
   // 先に入力されたトッピングは、最初の単品/セットに付ける。付け先が無ければ単独の行にする
