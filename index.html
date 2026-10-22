@@ -2544,13 +2544,14 @@ function startElapsedTimer(){
       const ticket=el.closest('.order-ticket');
       if(!ticket)return;
       const header=ticket.querySelector('[class*="ticket-header"]');
+      // compact など他のクラスを消さないよう、classListで状態クラスだけ切り替える
       if(min>=10){
-        ticket.className='order-ticket new critical';
-        if(header){header.className='ticket-header critical-header';}
+        ticket.classList.remove('urgent');ticket.classList.add('new','critical');
+        if(header){header.classList.remove('urgent-header');header.classList.add('critical-header');}
         el.previousElementSibling.textContent='🔴';
       } else if(min>=5){
-        ticket.className='order-ticket new urgent';
-        if(header){header.className='ticket-header urgent-header';}
+        ticket.classList.remove('critical');ticket.classList.add('new','urgent');
+        if(header){header.classList.remove('critical-header');header.classList.add('urgent-header');}
         el.previousElementSibling.textContent='🟡';
       }
     });
