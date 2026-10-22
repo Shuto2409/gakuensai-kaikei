@@ -3,6 +3,7 @@
 function showMenuAddModal(){
   S.editingMenuId=null;
   document.getElementById('e-is-drink').checked=false;
+  document.getElementById('e-is-topping').checked=false;
   document.getElementById('menu-edit-title').textContent='📋 商品を追加';
   ['e-name','e-price','e-cat'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('e-stock').value='0';
@@ -20,6 +21,7 @@ function showMenuEditModal(id){
   document.getElementById('e-cat').value=item.category||'';
   document.getElementById('e-stock').value=item.stock||0;
   document.getElementById('e-is-drink').checked=isDrinkItem(item);
+  document.getElementById('e-is-topping').checked=isToppingItem(item);
   document.getElementById('e-components-list').innerHTML='';
   const mode=isSetItem(item)?'set':item.isMaterial?'material':'normal';
   document.querySelectorAll('input[name="e-item-mode"]').forEach(r=>r.checked=false);
@@ -41,13 +43,15 @@ function closeMenuEditModal(){document.getElementById('menu-edit-modal-overlay')
 
 function autoDrinkFromCat(){
   const c=document.getElementById('e-cat').value;
-  if(/ドリンク|飲み物|drink/i.test(c)) document.getElementById('e-is-drink').checked=true;
+  if(/ドリンク|飲み物|drink/i.test(c)){document.getElementById('e-is-drink').checked=true;document.getElementById('e-is-topping').checked=false;}
+  if(/トッピング|topping/i.test(c)){document.getElementById('e-is-topping').checked=true;document.getElementById('e-is-drink').checked=false;}
 }
 function updateMenuMode(){
   let chk=document.querySelector('input[name="e-item-mode"]:checked');
   if(!chk){chk=document.querySelector('input[name="e-item-mode"][value="normal"]');if(chk)chk.checked=true;}
   const mode=chk?.value||'normal';
   const dg=document.getElementById('e-drink-group'); if(dg) dg.style.display=(mode==='set')?'none':'flex';
+  const tg=document.getElementById('e-topping-group'); if(tg) tg.style.display=(mode==='normal')?'flex':'none';
   document.getElementById('e-price-group').style.display=mode==='material'?'none':'block';
   document.getElementById('e-stock-group').style.display=mode==='set'?'none':'block';
   document.getElementById('e-set-group').style.display=(mode==='set'||mode==='normal')?'block':'none';
@@ -193,8 +197,9 @@ async function saveMenuItem(){
 
   showLoading(true);
   try{
-    const isDrink=!isSet&&document.getElementById('e-is-drink').checked;
-    const data={name,price,category,stock:composite?0:stock,currentStock:composite?0:stock,active:true,isSet:composite,isMaterial,isDrink,
+    const isTopping=mode==='normal'&&document.getElementById('e-is-topping').checked;
+    const isDrink=!isSet&&!isTopping&&document.getElementById('e-is-drink').checked;
+    const data={name,price,category,stock:composite?0:stock,currentStock:composite?0:stock,active:true,isSet:composite,isMaterial,isDrink,isTopping,
       displayType:mode==='set'?'set':(composite?'single':'')};
     data.components=composite?components:[];
     if(S.editingMenuId){
