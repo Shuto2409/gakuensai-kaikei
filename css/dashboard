@@ -1,0 +1,13 @@
+/* ===== ダッシュボード ===== */
+#dash-screen{display:none;}
+#dash-screen.show{display:block;}
+.app-header.dash-header{background:linear-gradient(135deg,#1d4ed8,#2563eb);}
+.dash-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.dash-bar-label{flex:0 0 52px;font-size:12px;font-weight:700;color:#334155;}
+.dash-bar-label.wide{flex-basis:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dash-bar-track{flex:1;height:18px;background:#eef2f7;border-radius:9px;overflow:hidden;}
+.dash-bar-fill{height:100%;background:#2563eb;border-radius:9px;min-width:2px;}
+.dash-bar-fill.alt{background:#f59e0b;}
+.dash-bar-val{flex:0 0 112px;text-align:right;font-size:13px;font-weight:800;}
+.dash-bar-val small{font-size:11px;font-weight:600;color:var(--gray);}
+.dash-tops{margin-top:8px;font-size:12px;font-weight:700;color:#b45309;background:#fef3c7;padding:6px 10px;border-radius:8px;}
