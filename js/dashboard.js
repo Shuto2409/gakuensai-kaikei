@@ -19,12 +19,9 @@ function renderDashboard(){
   const total=orders.reduce((s,o)=>s+(o.total||0),0);
   const cnt=k=>orders.filter(o=>(o.status||'pending')===k).length;
   const avg=orders.length?Math.round(total/orders.length):0;
-  let h=`<div class="stats-grid">
-    <div class="stat-card"><div class="stat-value">¥${total.toLocaleString()}</div><div class="stat-label">本日の売上</div></div>
-    <div class="stat-card"><div class="stat-value">${orders.length}</div><div class="stat-label">注文数</div></div>
-    <div class="stat-card"><div class="stat-value">¥${avg.toLocaleString()}</div><div class="stat-label">客単価</div></div>
-    <div class="stat-card"><div class="stat-value" style="font-size:18px;">🍳${cnt('pending')} ／ 🛎️${cnt('cooked')} ／ ✅${cnt('completed')}</div><div class="stat-label">調理待ち ／ お渡し待ち ／ 受渡済</div></div>
-  </div>`;
+  const sc=(v,l)=>`<div class="stat-card"><div class="stat-value">${v}</div><div class="stat-label">${l}</div></div>`;
+  let h=`<div class="dash-stats">${sc('¥'+total.toLocaleString(),'本日の売上')}${sc(orders.length,'注文数')}${sc('¥'+avg.toLocaleString(),'客単価')}</div>
+  <div class="dash-stats">${sc(cnt('pending'),'調理待ち')}${sc(cnt('cooked'),'お渡し待ち')}${sc(cnt('completed'),'受渡済')}</div>`;
 
   // 時間帯別
   const hours={};
