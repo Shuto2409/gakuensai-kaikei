@@ -19,6 +19,45 @@ async function deleteDayRecord(dayId){
   showLoading(false);
 }
 
+// ── 注文履歴（会計・調理・受け渡しの各画面から開く）。受け渡し済みの注文も取り消せる ──
+function orderSummaryText(o){
+  return (o.items||[]).map(i=>{
+    const extra=[];
+    if(i.temp) extra.push(i.temp);
+    if(i.choices&&i.choices.length) i.choices.forEach(c=>extra.push(c.name+(c.temp?'('+c.temp+')':'')));
+    return `${i.name}${extra.length?'［'+extra.join('・')+'］':''}×${i.qty}`;
+  }).join('、');
+}
+function renderOrderHistory(){
+  const box=document.getElementById('history-list');
+  if(!box) return;
+  if(!S.isDayOpen||!S.currentDay){box.innerHTML='<div class="done-feed-empty">営業中の注文がありません</div>';return;}
+  const list=Object.values(S.ordersSnap||{}).filter(o=>String(o.dayId)===String(S.currentDay.id))
+    .sort((a,b)=>b.timestamp.localeCompare(a.timestamp));
+  if(list.length===0){box.innerHTML='<div class="done-feed-empty">まだ注文がありません</div>';return;}
+  const stMap={pending:['#d97706','🍳 調理待ち'],cooked:['#db2777','🛎️ お渡し待ち'],completed:['#16a34a','✅ 受渡済']};
+  box.innerHTML=list.map(o=>{
+    const st=stMap[o.status||'pending']||stMap.pending;
+    const time=new Date(o.timestamp).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="hist-row">
+      <div class="hist-main">
+        <div class="hist-top"><b>${o.ticketNum!=null?'🎫 '+o.ticketNum:'整理券なし'}</b><span>注文 #${o.orderNum||'?'}</span><span>${time}</span><span style="color:${st[0]};font-weight:800;">${st[1]}</span></div>
+        <div class="hist-items">${esc(orderSummaryText(o))}</div>
+        <div class="hist-total">¥${(o.total||0).toLocaleString()}</div>
+      </div>
+      <button class="btn btn-danger" style="padding:6px 12px;font-size:12px;flex-shrink:0;" onclick="requestCancelOrder('${o.id}')">取消</button>
+    </div>`;
+  }).join('');
+}
+function showOrderHistory(){
+  renderOrderHistory();
+  document.getElementById('history-modal-overlay').classList.add('show');
+}
+function closeOrderHistory(){document.getElementById('history-modal-overlay').classList.remove('show');}
+function requestCancelOrder(orderId){
+  // 誤操作防止: 管理PINを確認してから取り消す
+  showAdminPin(()=>cancelOrder(orderId));
+}
 async function cancelOrder(orderId){
   const order=S.ordersSnap[orderId];
   if(!order){showToast('注文が見つかりません','error');return;}
@@ -64,12 +103,14 @@ async function cancelOrder(orderId){
     // 整理券を空きに戻す
     if(order.ticketNum!=null){
       const tk=Object.values(S.ticketsSnap).find(t=>t.num===order.ticketNum);
-      if(tk) await db.ref(`${ROOT}/tickets/${tk.id}`).update({status:'available',orderId:null});
+      // 受け渡し済みの注文では、整理券がすでに別のお客さんに使われていることがある → 自分の注文に紐づいているときだけ戻す
+      if(tk&&String(tk.orderId)===String(order.id)) await db.ref(`${ROOT}/tickets/${tk.id}`).update({status:'available',orderId:null});
     }
     // 注文を削除
     await db.ref(`${ROOT}/orders/${orderId}`).remove();
     showToast(`注文 #${order.orderNum||'?'} を取り消しました ✅`,'success');
     renderSalesContent();
+    if(document.getElementById('history-modal-overlay').classList.contains('show')) renderOrderHistory();
   }catch(e){console.error(e);showToast('エラーが発生しました','error');}
   showLoading(false);
 }
