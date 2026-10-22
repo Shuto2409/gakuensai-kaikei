@@ -31,7 +31,7 @@ function showMenuEditModal(id){
   if(item.components&&item.components.length){
     item.components.forEach(comp=>{
       if(comp.isChoice){
-        addComponentRow(true,{label:comp.label,choiceIds:(comp.choiceIds||[]).map(String),qty:comp.qty||1});
+        addComponentRow(true,{label:comp.label,choiceIds:(comp.choiceIds||[]).map(String),qty:comp.qty||1,qtys:comp.qtys||{},optional:!!comp.optional,extra:comp.extra||0});
       }else{
         addComponentRow(false,{id:String(comp.id),qty:comp.qty||1});
       }
@@ -103,6 +103,7 @@ function addComponentRow(isChoiceMode=false, savedData=null, rowId=null){
         <input type="checkbox" class="comp-choice-item" data-id="${i.id}" ${checkedIds.has(String(i.id))?'checked':''} style="accent-color:var(--primary);width:15px;height:15px;flex-shrink:0;">
         <span style="font-size:13px;font-weight:600;">${esc(i.name)}</span>
         ${i.stock>0?`<span style="font-size:11px;color:var(--gray);">(在庫:${i.currentStock!=null?i.currentStock:i.stock})</span>`:''}
+        <span style="margin-left:auto;display:inline-flex;align-items:center;gap:3px;" onclick="event.stopPropagation()"><input type="number" class="comp-opt-qty" min="0" step="any" placeholder="${qty}" value="${(savedData?.qtys&&savedData.qtys[String(i.id)]!=null)?savedData.qtys[String(i.id)]:''}" style="width:56px;padding:3px 5px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;text-align:center;"><span style="font-size:11px;color:var(--gray);">消費</span></span>
       </label>`
     ).join('');
     row.innerHTML=`
@@ -127,7 +128,11 @@ function addComponentRow(isChoiceMode=false, savedData=null, rowId=null){
           </div>
         </div>
       </div>
-      <div style="font-size:12px;font-weight:700;color:var(--gray);margin-bottom:5px;">選択できる商品（複数選択可）：</div>
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:9px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;"><input type="checkbox" class="comp-optional" ${savedData?.optional?'checked':''} style="width:16px;height:16px;"> 「なし」を選べる</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;">追加料金 <input type="number" class="comp-extra" min="0" value="${savedData?.extra||0}" style="width:64px;padding:5px;border:1.5px solid var(--border);border-radius:8px;text-align:center;"> 円</label>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--gray);margin-bottom:5px;">選択できる商品（複数選択可・右の数字＝その商品の1回あたり消費量。空欄なら上の消費数）：</div>
       <div style="background:#f8fafc;border-radius:8px;padding:8px;max-height:150px;overflow-y:auto;">
         ${itemOptions||'<div style="color:var(--gray);font-size:12px;">商品がありません</div>'}
       </div>
@@ -180,7 +185,13 @@ async function saveMenuItem(){
         const label=row.querySelector('.comp-choice-label')?.value.trim()||'ドリンク';
         const choiceIds=[...row.querySelectorAll('.comp-choice-item:checked')].map(cb=>cb.dataset.id);
         const choiceQty=parseInt(row.querySelector('.comp-qty-input')?.value)||1;
-        if(choiceIds.length>0) out.push({isChoice:true,label,choiceIds,qty:choiceQty});
+        const qtys={}; row.querySelectorAll('.comp-choice-item:checked').forEach(cb=>{
+          const v=cb.closest('label').querySelector('.comp-opt-qty')?.value;
+          if(v!==''&&v!=null&&!isNaN(Number(v))) qtys[cb.dataset.id]=Number(v);
+        });
+        const optional=!!row.querySelector('.comp-optional')?.checked;
+        const extra=parseInt(row.querySelector('.comp-extra')?.value)||0;
+        if(choiceIds.length>0) out.push({isChoice:true,label,choiceIds,qty:choiceQty,qtys,optional,extra});
       }else{
         const id=row.querySelector('.comp-item-select')?.value;
         const qty=parseInt(row.querySelector('.comp-qty-input')?.value)||1;
