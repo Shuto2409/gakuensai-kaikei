@@ -33,6 +33,7 @@ function restoreScreen(){
   else if(n==='kitchen') enterKitchen();
   else if(n==='handoff') enterHandoff();
   else if(n==='pos') enterPos();
+  else if(n==='dash') enterDash();
   else if(n==='admin') enterAdmin();
 }
 function enterCashier(){
@@ -303,6 +304,7 @@ function setupListeners(){
     if(S.currentRole==='cashier') updateCashierOverlay();
     if(S.currentRole==='kitchen'){updateKitchenOverlay();renderKitchen();}
     if(S.currentRole==='handoff'){updateHandoffOverlay();renderHandoff();}
+    if(S.currentRole==='dash') renderDashboard();
     if(S.currentRole==='admin'){renderAdminTab(S.activeAdminTab);updateAdminDayStatus();}
   });
 
@@ -310,6 +312,7 @@ function setupListeners(){
     S.ordersSnap=snap.val()||{};
     if(S.currentRole==='kitchen') renderKitchen();
     if(S.currentRole==='handoff') renderHandoff();
+    if(S.currentRole==='dash') renderDashboard();
     if(S.currentRole==='admin'&&S.activeAdminTab==='sales') renderSalesContent();
     if(S.currentRole==='admin'&&S.activeAdminTab==='vouchers') renderAdminVouchers();
   });
