@@ -234,7 +234,7 @@ function orderLines(order){
         const ch=(it.choices||[])[choiceIdx++];
         if(ch&&ch.none) return;
         const cref=ch?(S.menu[ch.id]||S.menu[String(ch.id)]):null;
-        if(ch&&cref&&isToppingItem(cref)&&!isDrinkItem(cref)){ (myTops=myTops||[]).push({name:ch.name,qty:it.qty,key:`${i}_${ci}`}); return; }
+        if(ch&&cref&&!isDrinkItem(cref)&&(isToppingItem(cref)||c.extra>0||/トッピング/.test(c.label||''))){ (myTops=myTops||[]).push({name:ch.name,qty:it.qty,key:`${i}_${ci}`}); return; }
         lines.push({key:`${i}_${ci}`,name:ch?ch.name||ch.label||'':(c.label||'選択'),qty:(c.qty||1)*it.qty,sub:ch&&ch.temp?tempLabel(ch.temp):'',drink:isDrinkItem(cref)});
       } else {
         const ref=S.menu[c.id]||S.menu[String(c.id)];
