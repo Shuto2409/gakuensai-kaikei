@@ -52,8 +52,9 @@ function renderMenu(){
   if(base.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>このカテゴリの商品はありません</p></div>`;return;}
   const sections=[
     ['セット','set',base.filter(i=>isSetItem(i))],
-    ['単品','single',base.filter(i=>!isSetItem(i)&&!isDrinkItem(i))],
+    ['単品','single',base.filter(i=>!isSetItem(i)&&!isDrinkItem(i)&&!isToppingItem(i))],
     ['ドリンク','drink',base.filter(i=>isDrinkItem(i))],
+    ['トッピング','topping',base.filter(i=>isToppingItem(i))],
   ];
   sections.forEach(([label,cls,items])=>{
     if(items.length===0) return;
@@ -70,9 +71,16 @@ function renderMenu(){
 function isSetItem(i){return !!(i&&i.isSet)&&i.displayType!=='single';}
 //  DRINK
 const DRINK_NAME_RE=/ドリンク|飲み物|ジュース|茶|コーラ|ファンタ|サイダー|ソーダ|ラムネ|コーヒー|珈琲|カルピス|レモネード|ウォーター|スポーツ|オレンジ|グレープ|アップル|ミネラル|水$/;
+// トッピング: レジのドリンクの下に別の段で並べる。管理画面のチェックが最優先、無ければカテゴリ名で判定
+function isToppingItem(mi){
+  if(!mi||isSetItem(mi)||mi.isMaterial) return false;
+  if(mi.isTopping===true||mi.isTopping===false) return mi.isTopping;
+  return /トッピング|topping/i.test(mi.category||'');
+}
 function isDrinkItem(mi){
   if(!mi||isSetItem(mi)) return false;
-  if(mi.isDrink===true||mi.isDrink===false) return mi.isDrink;       // 管理画面で明示した設定が最優先
+  if(mi.isDrink===true||mi.isDrink===false) return mi.isDrink;
+  if(mi.isTopping===true) return false;       // 管理画面で明示した設定が最優先
   if(/ドリンク|飲み物|drink/i.test(mi.category||'')) return true;
   if(DRINK_NAME_RE.test(mi.name||'')) return true;
   // セットの「ドリンク」選択肢に入っている商品もドリンク扱い
