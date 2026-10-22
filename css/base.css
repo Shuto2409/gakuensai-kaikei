@@ -78,8 +78,6 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 .role-cards{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;width:100%;max-width:760px;position:relative;z-index:2;}
 /* 1段目: 会計・調理・受け渡し / 2段目: POS管理・管理（中央寄せ） */
 .role-cards>.role-card{grid-column:span 2;}
-.role-cards>.role-card:nth-child(4){grid-column:2 / span 2;}
-.role-cards>.role-card:nth-child(5){grid-column:4 / span 2;}
 @media(max-width:600px){
   .role-cards{gap:8px;}
   .role-cards>.role-card{padding:18px 6px 14px;}
@@ -120,6 +118,11 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 .role-card.kitchen-card::after{background:#ea580c;}
 .role-card.handoff-card::after{background:#db2777;}
 .role-card.pos-card::after{background:#0d9488;}
+.role-card.dash-card{background:#dbeafe;border-color:#bfdbfe;}
+.role-card.dash-card .rc-title{color:#1e3a8a;}
+.role-card.dash-card .rc-desc{color:#1d4ed8;}
+.role-card.dash-card:hover:not(.disabled){background:#bfdbfe;border-color:#93c5fd;box-shadow:0 20px 40px rgba(37,99,235,.3);}
+.role-card.dash-card::after{background:#2563eb;}
 .role-card.admin-card::after{background:#64748b;}
 .role-closed-notice{margin-top:20px;background:rgba(255,255,255,.06);border-radius:12px;padding:12px 20px;color:rgba(255,255,255,.5);font-size:13px;text-align:center;border:1px solid rgba(255,255,255,.1);}
 .role-closed-notice strong{color:rgba(255,255,255,.8);}
