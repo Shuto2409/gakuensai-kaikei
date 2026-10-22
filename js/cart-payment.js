@@ -35,7 +35,10 @@ function addToCartWithChoices(item,choices){
     const avail=getSetAvailability(item);
     if(avail!==null&&ex.qty>=avail){showToast('在庫が足りません','error');return;}
     ex.qty++;
-  }else{S.cart.push({...item,qty:1,choices,_choiceKey:choiceKey});}
+  }else{
+    const extra=choices.reduce((s,c)=>s+(Number(c.extra)||0),0);
+    S.cart.push({...item,price:(Number(item.price)||0)+extra,qty:1,choices,_choiceKey:choiceKey});
+  }
   renderCart();
 }
 function removeFromCart(id,choiceKey=''){
@@ -84,7 +87,7 @@ function renderCart(){
   S.cart.forEach(item=>{
     const ck=item._choiceKey||'';
     const choiceTag=item.choices&&item.choices.length>0
-      ?item.choices.map(c=>`<span class="cart-choice-tag">🔸 ${esc(c.label||c.compLabel||'')}: ${esc(c.name||'')}${c.temp?' '+tempBadge(c.temp):''}</span>`).join('')
+      ?item.choices.map(c=>`<span class="cart-choice-tag">🔸 ${esc(c.label||c.compLabel||'')}: ${esc(c.name||'')}${c.extra>0?' +'+c.extra+'円':''}${c.temp?' '+tempBadge(c.temp):''}</span>`).join('')
       :(item.temp?`<span class="cart-choice-tag">${tempBadge(item.temp)}</span>`:'');
     const d=document.createElement('div');
     d.className='cart-item';
@@ -326,17 +329,18 @@ async function confirmPayment(){
       if(!mi) continue;
       if(mi.isSet&&mi.components){
         // セット: 固定構成品の在庫を減算、選択式は選ばれた商品の在庫を減算
+        let cIdx=0;
         for(const comp of mi.components){
           if(comp.isChoice){
-            if(ci.choices){
-              for(const choice of ci.choices){
-                const choiceItem=S.menu[choice.id]||S.menu[String(choice.id)];
-                if(choiceItem&&choiceItem.stock>0){
-                  await db.ref(`${ROOT}/menu/${choice.id}/currentStock`).transaction(cur=>{
-                    if(cur===null)return cur;
-                    return Math.max(0,cur-(comp.qty||1)*ci.qty);
-                  });
-                }
+            const choice=(ci.choices||[])[cIdx++];
+            if(choice&&!choice.none){
+              const choiceItem=S.menu[choice.id]||S.menu[String(choice.id)];
+              if(choiceItem&&choiceItem.stock>0){
+                const q=choiceQty(comp,choice.id);
+                await db.ref(`${ROOT}/menu/${choice.id}/currentStock`).transaction(cur=>{
+                  if(cur===null)return cur;
+                  return Math.max(0,cur-q*ci.qty);
+                });
               }
             }
           } else {
