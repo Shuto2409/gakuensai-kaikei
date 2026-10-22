@@ -68,6 +68,11 @@ function renderMenu(){
 }
 
 //  種別: 単品でも構成品（バンズ・パティ等）を持てる。isSet=構成品あり(在庫連動)、displayType==='single' なら見た目は単品
+// 選択式の選択肢ごとの消費量（トッピングごとにg数が違う場合は qtys で個別指定）
+function choiceQty(comp,id){
+  const q=comp&&comp.qtys?comp.qtys[String(id)]:null;
+  return (q!=null&&q!=='')?Number(q):((comp&&comp.qty)||1);
+}
 function isSetItem(i){return !!(i&&i.isSet)&&i.displayType!=='single';}
 //  DRINK
 const DRINK_NAME_RE=/ドリンク|飲み物|ジュース|茶|コーラ|ファンタ|サイダー|ソーダ|ラムネ|コーヒー|珈琲|カルピス|レモネード|ウォーター|スポーツ|オレンジ|グレープ|アップル|ミネラル|水$/;
