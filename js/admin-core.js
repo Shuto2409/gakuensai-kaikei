@@ -306,10 +306,11 @@ function renderSettingsContent(){
       const hasStock=item.stock>0;
       const cur=hasStock?(item.currentStock!=null?item.currentStock:item.stock):null;
       const setTag=isSetItem(item)?'<span style="font-size:10px;background:#ede9fe;color:#7c3aed;border-radius:4px;padding:1px 5px;font-weight:700;">セット</span> ':'';
+      const topTag=isToppingItem(item)?'<span style="font-size:10px;background:#dcfce7;color:#166534;border-radius:4px;padding:1px 5px;font-weight:700;">トッピング</span> ':'';
       const matTag=item.isMaterial?'<span style="font-size:10px;background:#fef9c3;color:#92400e;border-radius:4px;padding:1px 5px;font-weight:700;">レジ非表示</span> ':'';
       html+=`<div class="menu-row">
         <div class="menu-row-info">
-          <div class="menu-row-name" style="${!isActive?'color:var(--gray);':''}">${setTag}${matTag}${esc(item.name)}</div>
+          <div class="menu-row-name" style="${!isActive?'color:var(--gray);':''}">${setTag}${matTag}${topTag}${esc(item.name)}</div>
           <div class="menu-row-sub">¥${item.price.toLocaleString()}${item.category?' / '+esc(item.category):''} / ${isSetItem(item)?'セット':item.isSet?'構成品から在庫計算':hasStock?`在庫:${cur}個`:'在庫管理なし'}</div>
         </div>
         <label class="toggle-switch"><input type="checkbox" ${isActive?'checked':''} onchange="toggleItem(${JSON.stringify(item.id).replace(/"/g,'&quot;')},this.checked)"><span class="toggle-slider"></span></label>
