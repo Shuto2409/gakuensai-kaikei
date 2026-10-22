@@ -306,7 +306,7 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 .temp-big{display:flex;gap:10px;}
 .temp-opt.big{flex:1;}
 .temp-opt.big span{display:block;width:100%;text-align:center;padding:16px 8px;font-size:17px;border-radius:14px;}
-.ln-sub{display:block;margin-top:2px;}
+.ln-sub{display:inline-block;margin-left:5px;vertical-align:middle;}
 /* 注文カード: 整理券を大きく / 全カード同じ大きさ */
 .ticket-big-no{font-size:38px;font-weight:900;line-height:1;letter-spacing:-1px;display:flex;align-items:baseline;gap:6px;}
 .ticket-big-no small{font-size:11px;font-weight:800;letter-spacing:0;opacity:.85;}
@@ -697,6 +697,27 @@ body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMa
 .grade-color-row .del-grade-btn{background:none;border:none;color:#cbd5e1;font-size:16px;cursor:pointer;padding:0 2px;}
 .grade-color-row .del-grade-btn:hover{color:#ef4444;}
 
+
+/* カード内の文字を小さめにして枠からはみ出さないようにする */
+.order-ticket.compact .ticket-big-no{font-size:26px;}
+.order-ticket.compact .ticket-big-no small{font-size:10px;}
+.order-ticket.compact .ticket-big-no.none{font-size:18px;}
+.order-ticket.compact .ticket-header{padding:6px 10px;}
+.order-ticket.compact .ticket-time{font-size:10px;}
+.order-ticket.compact .ticket-ordno{font-size:9px;}
+.order-ticket.compact .ticket-elapsed{font-size:10px;padding:1px 7px;margin-top:2px;}
+.order-ticket.compact .ticket-items{padding:4px 10px;}
+.order-ticket.compact .ticket-set-head{font-size:10px;padding:3px 0 0;line-height:1.2;}
+.order-ticket.compact .ticket-item-row{padding:4px 0;gap:6px;}
+.order-ticket.compact .ticket-item-row.chk{gap:6px;}
+.order-ticket.compact .ticket-item-name{font-size:12px;line-height:1.25;word-break:break-all;}
+.order-ticket.compact .ticket-item-qty{font-size:11px;padding:1px 7px;margin-left:4px;}
+.order-ticket.compact .item-chk{width:17px;height:17px;}
+.order-ticket.compact .temp-badge{font-size:9px;padding:0 6px;}
+.order-ticket.compact .cooked-tag{font-size:9px;}
+.order-ticket.compact .ticket-footer{padding:6px 8px;}
+.order-ticket.compact .complete-btn{padding:7px;font-size:12px;}
+#kitchen-grid,.compact-grid{grid-auto-rows:225px;}
 </style>
 </head>
 <body>
@@ -2371,7 +2392,7 @@ function renderOrderTicketCard(order,opts){
     <div class="ticket-items">
       ${orderLines(order).map(g=>{
         const ck=opts.checkKind&&!opts.isDone;
-        const head=g.setName?`<div class="ticket-set-head">📦 ${esc(g.setName)} × ${g.setQty}</div>`:'';
+        const head=g.setName?`<div class="ticket-set-head">📦 ${esc(String(g.setName).replace(/[（(].*$/,''))} × ${g.setQty}</div>`:'';
         return head+g.lines.map(ln=>{
           const on=ck&&order[opts.checkKind]&&order[opts.checkKind][ln.key];
           const cooked=opts.showCooked&&order.itemsDone&&order.itemsDone[ln.key];
