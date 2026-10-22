@@ -44,7 +44,7 @@
 /* POSレジ風メニュー: 段ごとに同じ大きさのタイル */
 #menu-grid{display:flex;flex-direction:column;gap:10px;}
 .pos-sec{display:flex;gap:8px;align-items:stretch;}
-.pos-sec-label{width:52px;flex-shrink:0;border-radius:12px;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;letter-spacing:0;font-size:13px;font-weight:900;color:#fff;}
+.pos-sec-label{width:68px;flex-shrink:0;border-radius:12px;display:flex;align-items:center;justify-content:center;text-align:center;white-space:nowrap;letter-spacing:0;font-size:12px;font-weight:900;color:#fff;}
 .pos-sec.set .pos-sec-label{background:#7c3aed;}
 .pos-sec.single .pos-sec-label{background:#d97706;}
 .pos-sec.drink .pos-sec-label{background:#0284c7;}
@@ -59,7 +59,7 @@
 .menu-btn.pos-tile:hover:not(.out-of-stock){transform:none;}
 .menu-btn.pos-tile.out-of-stock{opacity:.4;}
 .menu-btn.pos-tile.low-stock{border-color:#f59e0b;}
-@media(max-width:480px){.pos-tiles{grid-template-columns:repeat(2,1fr);}.pos-sec-label{width:36px;font-size:12px;}}
+@media(max-width:480px){.pos-tiles{grid-template-columns:repeat(2,1fr);}.pos-sec-label{width:56px;font-size:11px;}}
 
 /* ドリンク温度 */
 .temp-opts{display:inline-flex;gap:6px;}
