@@ -80,3 +80,7 @@
 .co-back-btn{padding:14px 34px;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;background:#334155;color:white;transition:all .2s;}
 .co-back-btn:hover{background:#475569;}
 
+
+/* トッピング段（ドリンクの下） */
+.pos-sec.topping .pos-sec-label{background:#16a34a;}
+.pos-sec.topping .menu-btn.pos-tile{border-color:#86efac;background:#f0fdf4;}
