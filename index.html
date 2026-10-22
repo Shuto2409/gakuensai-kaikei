@@ -14,12 +14,13 @@
 // ▼ 配布用ファイルではここに設定が自動で入ります ▼
 window.PRESET_CONFIG = null;
 </script>
-<link rel="stylesheet" href="css/base.css?v=1.4.1">
-<link rel="stylesheet" href="css/cashier.css?v=1.4.1">
-<link rel="stylesheet" href="css/kitchen.css?v=1.4.1">
-<link rel="stylesheet" href="css/admin.css?v=1.4.1">
-<link rel="stylesheet" href="css/shift.css?v=1.4.1">
-<link rel="stylesheet" href="css/ticket-compact.css?v=1.4.1">
+<link rel="stylesheet" href="css/base.css?v=1.5.0">
+<link rel="stylesheet" href="css/cashier.css?v=1.5.0">
+<link rel="stylesheet" href="css/kitchen.css?v=1.5.0">
+<link rel="stylesheet" href="css/admin.css?v=1.5.0">
+<link rel="stylesheet" href="css/shift.css?v=1.5.0">
+<link rel="stylesheet" href="css/dashboard.css?v=1.5.0">
+<link rel="stylesheet" href="css/ticket-compact.css?v=1.5.0">
 </head>
 <body>
 
@@ -229,6 +230,11 @@ window.PRESET_CONFIG = null;
       <div class="rc-title">POS管理</div>
       <div class="rc-desc">メニュー追加・在庫管理を行う</div>
     </div>
+    <div class="role-card dash-card" id="role-dash" onclick="enterDash()">
+      <div class="rc-icon">📊</div>
+      <div class="rc-title">ダッシュボード</div>
+      <div class="rc-desc">売上・時間帯・出数をみんなで確認</div>
+    </div>
     <div class="role-card admin-card" onclick="enterAdmin()">
       <div class="rc-icon">⚙️</div>
       <div class="rc-title">管理</div>
@@ -414,6 +420,18 @@ window.PRESET_CONFIG = null;
     <div class="pos-tab-content active" id="pcontent-menu"><div id="pos-menu-content"></div></div>
     <div class="pos-tab-content" id="pcontent-inventory"><div id="pos-inventory-content"></div></div>
   </div>
+</div>
+
+<!-- ============ DASHBOARD SCREEN ============ -->
+<div id="dash-screen">
+  <div class="app-header dash-header">
+    <button class="header-back" onclick="backToRole()">← 戻る</button>
+    <div class="header-info">
+      <div class="header-title">📊 ダッシュボード</div>
+      <div class="header-sub"><span class="conn-dot"></span><span>リアルタイム更新</span></div>
+    </div>
+  </div>
+  <div class="pos-body"><div id="dash-content"></div></div>
 </div>
 
 <!-- ============ ADMIN SCREEN ============ -->
@@ -614,19 +632,20 @@ window.PRESET_CONFIG = null;
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="js/config.js?v=1.4.1"></script>
-<script src="js/db.js?v=1.4.1"></script>
-<script src="js/state.js?v=1.4.1"></script>
-<script src="js/roles.js?v=1.4.1"></script>
-<script src="js/menu.js?v=1.4.1"></script>
-<script src="js/cart-payment.js?v=1.4.1"></script>
-<script src="js/kitchen-handoff.js?v=1.4.1"></script>
-<script src="js/admin-core.js?v=1.4.1"></script>
-<script src="js/menu-admin.js?v=1.4.1"></script>
-<script src="js/orders-modals.js?v=1.4.1"></script>
-<script src="js/export-utils.js?v=1.4.1"></script>
-<script src="js/shift.js?v=1.4.1"></script>
-<script src="js/accounts.js?v=1.4.1"></script>
-<script src="js/boot.js?v=1.4.1"></script>
+<script src="js/config.js?v=1.5.0"></script>
+<script src="js/db.js?v=1.5.0"></script>
+<script src="js/state.js?v=1.5.0"></script>
+<script src="js/roles.js?v=1.5.0"></script>
+<script src="js/menu.js?v=1.5.0"></script>
+<script src="js/cart-payment.js?v=1.5.0"></script>
+<script src="js/kitchen-handoff.js?v=1.5.0"></script>
+<script src="js/admin-core.js?v=1.5.0"></script>
+<script src="js/menu-admin.js?v=1.5.0"></script>
+<script src="js/orders-modals.js?v=1.5.0"></script>
+<script src="js/dashboard.js?v=1.5.0"></script>
+<script src="js/export-utils.js?v=1.5.0"></script>
+<script src="js/shift.js?v=1.5.0"></script>
+<script src="js/accounts.js?v=1.5.0"></script>
+<script src="js/boot.js?v=1.5.0"></script>
 </body>
 </html>
