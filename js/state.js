@@ -16,7 +16,7 @@ function downloadShareFile(){
 
 //  SCREEN MANAGEMENT
 function showScreen(name){
-  ['setup-screen','share-screen','login-screen','role-screen','cashier-screen','kitchen-screen','handoff-screen','pos-screen','admin-screen']
+  ['setup-screen','share-screen','login-screen','role-screen','cashier-screen','kitchen-screen','handoff-screen','pos-screen','dash-screen','admin-screen']
     .forEach(id=>{
       const el=document.getElementById(id);
       if(id==='setup-screen'||id==='share-screen'||id==='login-screen'){
@@ -65,6 +65,10 @@ function showScreen(name){
     document.getElementById('pos-screen').style.display='block';
     document.getElementById('pos-screen').classList.add('show');
     renderPosTab(S.activePosTab||'menu');
+  } else if(name==='dash'){
+    document.getElementById('dash-screen').style.display='block';
+    document.getElementById('dash-screen').classList.add('show');
+    renderDashboard();
   } else if(name==='admin'){
     document.getElementById('admin-screen').style.display='block';
     document.getElementById('admin-screen').classList.add('show');
