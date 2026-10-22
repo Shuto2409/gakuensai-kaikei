@@ -1,0 +1,23 @@
+/* ===== 調理/受け渡しカード（コンパクト表示） ===== */
+/* カード内の文字を小さめにして枠からはみ出さないようにする */
+.order-ticket.compact .ticket-big-no{font-size:26px;}
+.order-ticket.compact .ticket-big-no small{font-size:10px;}
+.order-ticket.compact .ticket-big-no.none{font-size:18px;}
+.order-ticket.compact .ticket-header{padding:6px 10px;}
+.order-ticket.compact .ticket-time{font-size:10px;}
+.order-ticket.compact .ticket-ordno{font-size:9px;}
+.order-ticket.compact .ticket-elapsed{font-size:10px;padding:1px 7px;margin-top:2px;}
+.order-ticket.compact .ticket-items{padding:4px 10px;}
+.order-ticket.compact .ticket-set-head{font-size:10px;padding:3px 0 0;line-height:1.2;}
+.order-ticket.compact .ticket-item-row{padding:4px 0;gap:6px;}
+.order-ticket.compact .ticket-item-row.chk{gap:6px;}
+.order-ticket.compact .ticket-item-name{font-size:12px;line-height:1.25;word-break:break-all;}
+.order-ticket.compact .ticket-item-qty{font-size:11px;padding:1px 7px;margin-left:4px;}
+.order-ticket.compact .item-chk{width:17px;height:17px;}
+.order-ticket.compact .temp-badge{font-size:9px;padding:0 6px;}
+.order-ticket.compact .cooked-tag{font-size:9px;}
+.order-ticket.compact .ticket-footer{padding:6px 8px;}
+.order-ticket.compact .complete-btn{padding:7px;font-size:12px;}
+#kitchen-grid,.compact-grid{grid-auto-rows:auto;}
+.order-ticket{height:auto!important;box-sizing:border-box;}
+.order-ticket .ticket-items{overflow:visible!important;}
