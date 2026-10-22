@@ -48,7 +48,7 @@ function renderOrderTicketCard(order,opts){
           <span class="ticket-item-name">${esc(ln.name)}${cooked?' <small class="cooked-tag">済</small>':''}${ln.sub?`<span class="ln-sub">${tempBadge(ln.sub)}</span>`:''}</span>
           <span class="ticket-item-qty">× ${ln.qty}</span>
         </label>`;
-        }).join('');
+        }).join('')+(g.toppings&&g.toppings.length?`<div class="ln-top">＋ ${Object.entries(g.toppings.reduce((m,t)=>{m[t.name]=(m[t.name]||0)+t.qty;return m;},{})).map(([n,q])=>esc(n)+(q>1?' ×'+q:'')).join(' ／ ')}</div>`:'');
       }).join('')}
     </div>
     ${opts.noAction?'':`<div class="ticket-footer">
@@ -208,11 +208,22 @@ function startElapsedTimer(){
 // 注文の中身を「チェックできる最小単位（セットなら中身ごと）」に展開する
 function orderLines(order){
   const groups=[];
+  let lastMain=-1;            // 直前の「トッピング以外・ドリンク以外」のグループ
+  const earlyToppings=[];     // 先にトッピングが来た場合の待機
   (order.items||[]).forEach((it,i)=>{
     const mi=S.menu[it.id]||S.menu[String(it.id)];
     const comps=mi&&isSetItem(mi)&&Array.isArray(mi.components)?mi.components:null;
+    // トッピングは追加のものなので、単品/セットの下に小さく付ける（チェック対象にしない）
+    if(isToppingItem(mi)&&!it.temp){
+      const tp={name:it.name,qty:it.qty,key:`${i}`};
+      if(lastMain>=0) (groups[lastMain].toppings=groups[lastMain].toppings||[]).push(tp);
+      else earlyToppings.push(tp);
+      return;
+    }
     if(!comps||comps.length===0){
-      groups.push({setName:null,lines:[{key:`${i}`,name:it.name,qty:it.qty,sub:it.temp?tempLabel(it.temp):'',drink:isDrinkItem(mi)}]});
+      const dr=isDrinkItem(mi);
+      groups.push({setName:null,lines:[{key:`${i}`,name:it.name,qty:it.qty,sub:it.temp?tempLabel(it.temp):'',drink:dr}]});
+      if(!dr) lastMain=groups.length-1;
       return;
     }
     const lines=[];
@@ -246,9 +257,20 @@ function orderLines(order){
       }
       lines[matAt]={key:`${i}_m`,name:nm||matNames.join('・'),qty:matQty};
     }
-    groups.push({setName:it.name,setQty:it.qty,lines});
+    // 同じセットの中でもドリンクは一番下に
+    const ordered=[...lines.filter(l=>!l.drink),...lines.filter(l=>l.drink)];
+    groups.push({setName:it.name,setQty:it.qty,lines:ordered});
+    lastMain=groups.length-1;
   });
-  return groups;
+  // 先に入力されたトッピングは、最初の単品/セットに付ける。付け先が無ければ単独の行にする
+  if(earlyToppings.length){
+    const firstMain=groups.findIndex(g=>g.setName||!g.lines[0].drink);
+    if(firstMain>=0) groups[firstMain].toppings=[...earlyToppings,...(groups[firstMain].toppings||[])];
+    else earlyToppings.forEach(t=>groups.unshift({setName:null,lines:[{key:t.key,name:t.name,qty:t.qty,drink:false}]}));
+  }
+  // ドリンクだけの行は、セット・単品より下（カードの一番下）に並べる
+  const isDrinkGroup=g=>!g.setName&&g.lines.length===1&&g.lines[0].drink;
+  return [...groups.filter(g=>!isDrinkGroup(g)),...groups.filter(isDrinkGroup)];
 }
 function allLinesChecked(order,kind){
   const keys=orderLines(order).flatMap(g=>g.lines.map(l=>l.key));
