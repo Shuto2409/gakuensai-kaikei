@@ -1,5 +1,8 @@
 /* ===== 共通・ホーム・ヘッダー ===== */
-*{box-sizing:border-box;margin:0;padding:0;}
+*{box-sizing:border-box;margin:0;padding:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+/* タブレットで入力欄を押したときの自動ズームを防ぐ（16px未満だとiOSが拡大する） */
+@media(pointer:coarse){input,select,textarea{font-size:16px !important;}}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
 body{font-family:-apple-system,'Hiragino Kaku Gothic Pro','メイリオ',BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f1f5f9;color:#1e293b;min-height:100vh;}
 :root{
   --primary:#2563eb;--primary-dark:#1d4ed8;
