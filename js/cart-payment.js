@@ -339,7 +339,7 @@ async function confirmPayment(){
                 const q=choiceQty(comp,choice.id);
                 await db.ref(`${ROOT}/menu/${choice.id}/currentStock`).transaction(cur=>{
                   if(cur===null)return cur;
-                  return Math.max(0,cur-q*ci.qty);
+                  return r2(Math.max(0,cur-q*ci.qty));
                 });
               }
             }
@@ -348,7 +348,7 @@ async function confirmPayment(){
             if(compItem&&compItem.stock>0){
               await db.ref(`${ROOT}/menu/${comp.id}/currentStock`).transaction(cur=>{
                 if(cur===null)return cur;
-                return Math.max(0,cur-comp.qty*ci.qty);
+                return r2(Math.max(0,cur-comp.qty*ci.qty));
               });
             }
           }
