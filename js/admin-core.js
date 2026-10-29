@@ -474,7 +474,7 @@ function renderInventoryContent(){
       const cur=hasStock?(item.currentStock!=null?item.currentStock:item.stock):null;
       const isActive=item.active!==false;
       let badge=hasStock?`<span class="stk-badge ${cur<=0?'stk-zero':cur<=5?'stk-low':'stk-ok'}">${cur} 個</span>`:`<span class="stk-badge stk-unlimited">無制限</span>`;
-      let ctrl=hasStock?`<div class="stk-ctrl"><input type="number" id="si-${item.id}" placeholder="数量" min="0"><button class="btn btn-success" style="padding:6px 9px;font-size:12px;" onclick="addStock(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">補充</button><button class="btn btn-ghost" style="padding:6px 9px;font-size:12px;" onclick="setStock(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">設定</button></div>`:'';
+      let ctrl=hasStock?`<div class="stk-ctrl"><input type="number" id="si-${item.id}" placeholder="数量" min="0" step="any"><button class="btn btn-success" style="padding:6px 9px;font-size:12px;" onclick="addStock(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">補充</button><button class="btn btn-ghost" style="padding:6px 9px;font-size:12px;" onclick="setStock(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">設定</button></div>`:'';
       html+=`<div class="inv-item" style="${!isActive?'opacity:.5;':''}"><div class="inv-info"><div class="inv-name">${esc(item.name)}${item.isMaterial?' <span style="font-size:10px;background:#fef9c3;color:#92400e;border-radius:4px;padding:1px 5px;">レジ非表示</span>':''}</div><div class="inv-sub">¥${item.price.toLocaleString()}${item.category?' / '+esc(item.category):''}</div></div>${badge}${ctrl}</div>`;
     });
   }
@@ -483,15 +483,15 @@ function renderInventoryContent(){
 }
 async function addStock(id){
   const inp=document.getElementById(`si-${id}`);
-  const amt=parseInt(inp.value);
+  const amt=parseFloat(inp.value);
   if(!amt||amt<=0){showToast('補充数を入力してください','error');return;}
   const item=S.menu[id];if(!item)return;
-  await db.ref(`${ROOT}/menu/${id}/currentStock`).transaction(cur=>(cur!=null?cur:(item.stock||0))+amt);
+  await db.ref(`${ROOT}/menu/${id}/currentStock`).transaction(cur=>r2((cur!=null?cur:(item.stock||0))+amt));
   inp.value='';showToast(`${item.name} を ${amt}個補充しました`,'success');
 }
 async function setStock(id){
   const inp=document.getElementById(`si-${id}`);
-  const amt=parseInt(inp.value);
+  const amt=parseFloat(inp.value);
   if(isNaN(amt)||amt<0){showToast('在庫数を入力してください','error');return;}
   const item=S.menu[id];if(!item)return;
   await db.ref(`${ROOT}/menu/${id}/currentStock`).set(amt);
