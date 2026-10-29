@@ -76,7 +76,7 @@ function getSetAvailability(item){
     hasFixed=true;
     const cur=compItem.currentStock!=null?compItem.currentStock:compItem.stock;
     const perSet=comp.qty||1;
-    min=Math.min(min,Math.floor(cur/perSet));
+    min=Math.min(min,Math.floor(cur/perSet+1e-9));
   }
   return hasFixed?(min===Infinity?null:min):null;
 }
@@ -123,7 +123,7 @@ function addComponentRow(isChoiceMode=false, savedData=null, rowId=null){
         <div style="flex-shrink:0;">
           <div style="font-size:12px;font-weight:700;margin-bottom:4px;">消費数/セット</div>
           <div style="display:flex;align-items:center;gap:4px;">
-            <input type="number" class="comp-qty-input" min="1" value="${qty}" style="width:58px;padding:7px 6px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;text-align:center;outline:none;">
+            <input type="number" class="comp-qty-input" min="0.1" step="any" value="${qty}" style="width:58px;padding:7px 6px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;text-align:center;outline:none;">
             <span style="font-size:12px;color:var(--gray);">個</span>
           </div>
         </div>
@@ -154,7 +154,7 @@ function addComponentRow(isChoiceMode=false, savedData=null, rowId=null){
           <option value="">-- 商品を選択 --</option>
           ${opts}
         </select>
-        <input type="number" class="comp-qty-input" min="1" value="${qty}" style="width:60px;padding:7px 6px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;text-align:center;outline:none;">
+        <input type="number" class="comp-qty-input" min="0.1" step="any" value="${qty}" style="width:60px;padding:7px 6px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;text-align:center;outline:none;">
         <span style="font-size:12px;color:var(--gray);flex-shrink:0;">個</span>
         <button type="button" style="background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer;padding:0;" onclick="document.getElementById('${rid}').remove()">✕</button>
       </div>
@@ -167,7 +167,7 @@ async function saveMenuItem(){
   const name=document.getElementById('e-name').value.trim();
   const priceRaw=parseInt(document.getElementById('e-price').value);
   const category=document.getElementById('e-cat').value.trim();
-  const stock=parseInt(document.getElementById('e-stock').value)||0;
+  const stock=parseFloat(document.getElementById('e-stock').value)||0;
   const mode=document.querySelector('input[name="e-item-mode"]:checked')?.value||'normal';
 
   if(!name){showToast('商品名を入力してください','error');return;}
@@ -184,7 +184,7 @@ async function saveMenuItem(){
       if(isChoice){
         const label=row.querySelector('.comp-choice-label')?.value.trim()||'ドリンク';
         const choiceIds=[...row.querySelectorAll('.comp-choice-item:checked')].map(cb=>cb.dataset.id);
-        const choiceQty=parseInt(row.querySelector('.comp-qty-input')?.value)||1;
+        const choiceQty=parseFloat(row.querySelector('.comp-qty-input')?.value)||1;
         const qtys={}; row.querySelectorAll('.comp-choice-item:checked').forEach(cb=>{
           const v=cb.closest('label').querySelector('.comp-opt-qty')?.value;
           if(v!==''&&v!=null&&!isNaN(Number(v))) qtys[cb.dataset.id]=Number(v);
@@ -194,7 +194,7 @@ async function saveMenuItem(){
         if(choiceIds.length>0) out.push({isChoice:true,label,choiceIds,qty:choiceQty,qtys,optional,extra});
       }else{
         const id=row.querySelector('.comp-item-select')?.value;
-        const qty=parseInt(row.querySelector('.comp-qty-input')?.value)||1;
+        const qty=parseFloat(row.querySelector('.comp-qty-input')?.value)||1;
         if(id) out.push({id,qty});
       }
     });
