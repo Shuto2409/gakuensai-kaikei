@@ -97,7 +97,7 @@ function renderPosMenuContent(){
       const linkedSets=Object.values(S.menu).filter(s=>s.isSet&&s.components&&s.components.some(c=>String(c.id)===String(item.id)));
       const linkedHtml=linkedSets.map(s=>{
         const comp=s.components.find(c=>String(c.id)===String(item.id));
-        const avail=item.stock>0?Math.floor(cur/comp.qty):null;
+        const avail=item.stock>0?Math.floor(cur/comp.qty+1e-9):null;
         return `<span style="font-size:11px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:2px 7px;color:#0369a1;">${esc(s.name)}: ${avail!=null?avail+'セット販売可':'在庫管理なし'}</span>`;
       }).join(' ');
       html+=`<div class="menu-row" style="flex-wrap:wrap;gap:8px;">
@@ -165,7 +165,7 @@ function renderPosInventoryContent(){
       const linkedSets=Object.values(S.menu).filter(s=>s.isSet&&s.components&&s.components.some(c=>String(c.id)===String(item.id)));
       const linkedHtml=linkedSets.map(s=>{
         const comp=s.components.find(c=>String(c.id)===String(item.id));
-        const avail=item.stock>0?Math.floor(cur/comp.qty):null;
+        const avail=item.stock>0?Math.floor(cur/comp.qty+1e-9):null;
         const color=avail<=0?'#ef4444':avail<=3?'#f59e0b':'#16a34a';
         return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#f0f9ff;border-radius:8px;margin-bottom:5px;">
           <span style="font-size:13px;font-weight:600;">📦 ${esc(s.name)}</span>
@@ -182,7 +182,7 @@ function renderPosInventoryContent(){
         </div>
         <span class="stk-badge ${cur<=0?'stk-zero':cur<=item.stock*0.2?'stk-low':'stk-ok'}" style="font-size:15px;padding:6px 14px;">${cur} 個</span>
         <div class="stk-ctrl">
-          <input type="number" id="psi-${item.id}" placeholder="個数" min="0" style="width:70px;">
+          <input type="number" id="psi-${item.id}" placeholder="個数" min="0" step="any" style="width:70px;">
           <button class="btn btn-success" style="padding:6px 9px;font-size:12px;" onclick="addStockPos(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">補充</button>
           <button class="btn btn-ghost" style="padding:6px 9px;font-size:12px;" onclick="setStockPos(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">設定</button>
         </div>
@@ -207,7 +207,7 @@ function renderPosInventoryContent(){
       const cur=hasStock?(item.currentStock!=null?item.currentStock:item.stock):null;
       const isActive=item.active!==false;
       let badge=hasStock?`<span class="stk-badge ${cur<=0?'stk-zero':cur<=5?'stk-low':'stk-ok'}">${cur} 個</span>`:`<span class="stk-badge stk-unlimited">無制限</span>`;
-      let ctrl=hasStock?`<div class="stk-ctrl"><input type="number" id="psi-${item.id}" placeholder="数量" min="0"><button class="btn btn-success" style="padding:6px 9px;font-size:12px;" onclick="addStockPos(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">補充</button><button class="btn btn-ghost" style="padding:6px 9px;font-size:12px;" onclick="setStockPos(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">設定</button></div>`:'';
+      let ctrl=hasStock?`<div class="stk-ctrl"><input type="number" id="psi-${item.id}" placeholder="数量" min="0" step="any"><button class="btn btn-success" style="padding:6px 9px;font-size:12px;" onclick="addStockPos(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">補充</button><button class="btn btn-ghost" style="padding:6px 9px;font-size:12px;" onclick="setStockPos(${JSON.stringify(item.id).replace(/"/g,'&quot;')})">設定</button></div>`:'';
       html+=`<div class="inv-item" style="${!isActive?'opacity:.5;':''}"><div class="inv-info"><div class="inv-name">${esc(item.name)}</div><div class="inv-sub">¥${item.price.toLocaleString()}${item.category?' / '+item.category:''}</div></div>${badge}${ctrl}</div>`;
     });
   }
@@ -217,15 +217,15 @@ function renderPosInventoryContent(){
 
 async function addStockPos(id){
   const inp=document.getElementById(`psi-${id}`);
-  const amt=parseInt(inp.value);
+  const amt=parseFloat(inp.value);
   if(!amt||amt<=0){showToast('補充数を入力してください','error');return;}
   const item=S.menu[id];if(!item)return;
-  await db.ref(`${ROOT}/menu/${id}/currentStock`).transaction(cur=>(cur!=null?cur:(item.stock||0))+amt);
+  await db.ref(`${ROOT}/menu/${id}/currentStock`).transaction(cur=>r2((cur!=null?cur:(item.stock||0))+amt));
   inp.value='';showToast(`${item.name} を ${amt}個補充しました`,'success');
 }
 async function setStockPos(id){
   const inp=document.getElementById(`psi-${id}`);
-  const amt=parseInt(inp.value);
+  const amt=parseFloat(inp.value);
   if(isNaN(amt)||amt<0){showToast('在庫数を入力してください','error');return;}
   const item=S.menu[id];if(!item)return;
   await db.ref(`${ROOT}/menu/${id}/currentStock`).set(amt);
