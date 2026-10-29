@@ -68,6 +68,8 @@ function renderMenu(){
 }
 
 //  種別: 単品でも構成品（バンズ・パティ等）を持てる。isSet=構成品あり(在庫連動)、displayType==='single' なら見た目は単品
+// 在庫は小数（0.5個など）も扱うので、計算誤差を丸める
+function r2(n){return Math.round(n*100)/100;}
 // 選択式の選択肢ごとの消費量（トッピングごとにg数が違う場合は qtys で個別指定）
 function choiceQty(comp,id){
   const q=comp&&comp.qtys?comp.qtys[String(id)]:null;
