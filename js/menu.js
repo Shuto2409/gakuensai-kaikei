@@ -19,6 +19,7 @@ function filterCat(cat){
 }
 
 //  MENU (Cashier)
+const GAKU_CAT='学文';   // この名前のカテゴリーは専用の段になる
 function renderMenu(){
   const all=Object.values(S.menu).filter(i=>i.active!==false&&!i.isMaterial);
   const grid=document.getElementById('menu-grid');
@@ -50,11 +51,14 @@ function renderMenu(){
   // POSレジ風: セット／単品／ドリンクを段に分け、同じ大きさのタイルを並べる
   const base=S.selCat==='all'?all:all.filter(i=>(i.category||'')===S.selCat);
   if(base.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>このカテゴリの商品はありません</p></div>`;return;}
+  // カテゴリーが「学文」の商品は、セット/単品/ドリンクとは別の専用の段に出す
+  const isGaku=i=>(i.category||'').trim()===GAKU_CAT;
   const sections=[
-    ['セット','set',base.filter(i=>isSetItem(i))],
-    ['単品','single',base.filter(i=>!isSetItem(i)&&!isDrinkItem(i)&&!isToppingItem(i))],
-    ['ドリンク','drink',base.filter(i=>isDrinkItem(i))],
-    ['トッピング','topping',base.filter(i=>isToppingItem(i))],
+    ['セット','set',base.filter(i=>!isGaku(i)&&isSetItem(i))],
+    ['単品','single',base.filter(i=>!isGaku(i)&&!isSetItem(i)&&!isDrinkItem(i)&&!isToppingItem(i))],
+    ['ドリンク','drink',base.filter(i=>!isGaku(i)&&isDrinkItem(i))],
+    ['トッピング','topping',base.filter(i=>!isGaku(i)&&isToppingItem(i))],
+    [GAKU_CAT,'gaku',base.filter(isGaku)],
   ];
   sections.forEach(([label,cls,items])=>{
     if(items.length===0) return;
@@ -98,4 +102,3 @@ const TEMP_OPTS=[['常温','room'],['冷蔵','cold']];
 function tempLabel(t){return t||'';}
 // 温度は色つきの小さなバッジで表示（常温=橙 / 冷蔵=青）
 function tempBadge(t){return t?`<span class="temp-badge ${t==='冷蔵'?'cold':'room'}">${esc(t)}</span>`:'';}
-
