@@ -1,16 +1,28 @@
 // ===== レジのメニュー表示（セット/単品/ドリンク） =====
 //  CATEGORY FILTER (Cashier)
+// レジの段（セット/単品/ドリンク/トッピング/学文）。絞り込みボタンにも同じ並びで出す
+const GAKU_CAT='学文';   // この名前のカテゴリーは専用の段になる
+const MENU_ROWS=[['@set','セット'],['@single','単品'],['@drink','ドリンク'],['@topping','トッピング'],['@gaku',GAKU_CAT]];
+function menuRowOf(i){
+  if((i.category||'').trim()===GAKU_CAT) return '@gaku';
+  if(isSetItem(i)) return '@set';
+  if(isDrinkItem(i)) return '@drink';
+  if(isToppingItem(i)) return '@topping';
+  return '@single';
+}
 function renderCategoryFilter(){
-  // 食材はカテゴリフィルターに含めない
-  const cats=[...new Set(Object.values(S.menu).filter(i=>!i.isMaterial).map(i=>i.category).filter(Boolean))];
   const el=document.getElementById('cat-filter');
   if(!el) return;
+  const items=Object.values(S.menu).filter(i=>i.active!==false&&!i.isMaterial);
+  const rowIds=new Set(items.map(menuRowOf));
+  const rowNames=new Set(MENU_ROWS.map(r=>r[1]));
+  // 段の名前と同じカテゴリー名は重複するので出さない
+  const cats=[...new Set(items.map(i=>i.category).filter(Boolean))].filter(c=>!rowNames.has(c));
   const area=document.getElementById('cashier-menu-area');
-  // カテゴリが1つも無いときは左のカテゴリ欄ごと隠してメニューを広く使う
-  el.style.display=cats.length===0?'none':'';
-  if(area) area.style.gridTemplateColumns=cats.length===0?'1fr':'';
-  el.innerHTML=`<button class="cat-btn ${S.selCat==='all'?'active':''}" onclick="filterCat('all')" data-c="all">すべて</button>`;
-  cats.forEach(c=>{el.innerHTML+=`<button class="cat-btn ${S.selCat===c?'active':''}" onclick="filterCat(this.dataset.c)" data-c="${esc(c)}">${esc(c)}</button>`;});
+  const btns=[['all','すべて'],...MENU_ROWS.filter(r=>rowIds.has(r[0])),...cats.map(c=>[c,c])];
+  el.style.display=items.length===0?'none':'';
+  if(area) area.style.gridTemplateColumns=items.length===0?'1fr':'';
+  el.innerHTML=btns.map(([v,l])=>`<button class="cat-btn ${S.selCat===v?'active':''}" onclick="filterCat(this.dataset.c)" data-c="${esc(v)}">${esc(l)}</button>`).join('');
 }
 function filterCat(cat){
   S.selCat=cat;
@@ -19,7 +31,6 @@ function filterCat(cat){
 }
 
 //  MENU (Cashier)
-const GAKU_CAT='学文';   // この名前のカテゴリーは専用の段になる
 function renderMenu(){
   const all=Object.values(S.menu).filter(i=>i.active!==false&&!i.isMaterial);
   const grid=document.getElementById('menu-grid');
@@ -49,7 +60,7 @@ function renderMenu(){
     return;
   }
   // POSレジ風: セット／単品／ドリンクを段に分け、同じ大きさのタイルを並べる
-  const base=S.selCat==='all'?all:all.filter(i=>(i.category||'')===S.selCat);
+  const base=S.selCat==='all'?all:String(S.selCat).startsWith('@')?all.filter(i=>menuRowOf(i)===S.selCat):all.filter(i=>(i.category||'')===S.selCat);
   if(base.length===0){grid.innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>このカテゴリの商品はありません</p></div>`;return;}
   // カテゴリーが「学文」の商品は、セット/単品/ドリンクとは別の専用の段に出す
   const isGaku=i=>(i.category||'').trim()===GAKU_CAT;
