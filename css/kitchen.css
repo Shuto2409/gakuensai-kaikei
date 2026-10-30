@@ -172,3 +172,7 @@
 /* kt-status と kt-badge の in_use */
 .kt-status.in_use{color:#c2410c;}
 .kt-badge.in_use{background:#fff7ed;color:#c2410c;}
+
+
+.pos-sec.gaku .pos-sec-label{background:#0d9488;}
+.pos-sec.gaku .menu-btn.pos-tile{border-color:#5eead4;background:#f0fdfa;}
