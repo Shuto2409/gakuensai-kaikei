@@ -319,6 +319,7 @@ function setupListeners(){
 
   db.ref(`${ROOT}/days`).on('value',snap=>{
     S.daysSnap=snap.val()||{};
+    if(S.currentRole==='dash') renderDashboard();
     if(S.currentRole==='admin'&&S.activeAdminTab==='sales') renderSalesContent();
   });
 
@@ -385,4 +386,3 @@ function updateHandoffOverlay(){
   const ov=document.getElementById('handoff-closed');
   S.isDayOpen ? ov.classList.remove('show') : ov.classList.add('show');
 }
-
