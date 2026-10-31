@@ -16,3 +16,8 @@
 .dash-stats .stat-card{padding:12px 6px;}
 .dash-stats .stat-value{font-size:22px;}
 @media(max-width:420px){.dash-stats .stat-value{font-size:18px;}}
+
+.dash-days{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.dash-day-btn{padding:7px 14px;border-radius:999px;border:2px solid var(--border);background:white;font-size:13px;font-weight:800;color:#334155;cursor:pointer;}
+.dash-day-btn.active{background:#2563eb;border-color:#2563eb;color:white;}
+.dash-bar-fill.top{background:#16a34a;}
