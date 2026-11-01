@@ -1,4 +1,5 @@
 /* ===== ダッシュボード ===== */
+:root{--css-dashboard:1;}
 #dash-screen{display:none;}
 #dash-screen.show{display:block;}
 .app-header.dash-header{background:linear-gradient(135deg,#1d4ed8,#2563eb);}
