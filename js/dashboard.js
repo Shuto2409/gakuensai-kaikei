@@ -23,6 +23,37 @@ function dashOrders(){
   }
   return all.filter(o=>String(o.dayId)===String(sel));
 }
+// バザー券の枚数（日程別×色別）。換金のため、全日程を常に一覧で出す
+function dashVoucherCard(){
+  const colors=Object.entries(S.voucherColorsSnap||{}).sort((a,b)=>(a[1].order||0)-(b[1].order||0));
+  const days=Object.values(S.daysSnap||{}).map(d=>({id:String(d.id),label:`Day ${d.dayNumber}`,n:d.dayNumber}));
+  if(S.isDayOpen&&S.currentDay&&!days.some(d=>d.id===String(S.currentDay.id))) days.push({id:String(S.currentDay.id),label:`Day ${S.currentDay.dayNumber}（本日）`,n:S.currentDay.dayNumber});
+  days.sort((a,b)=>a.n-b.n);
+  const cnt={};   // cnt[colorId][dayId]
+  Object.values(S.ordersSnap||{}).forEach(o=>{
+    if(o.status==='cancelled') return;
+    Object.entries(o.vouchers||{}).forEach(([cid,n])=>{
+      const dk=String(o.dayId);
+      (cnt[cid]=cnt[cid]||{})[dk]=((cnt[cid]||{})[dk]||0)+(Number(n)||0);
+    });
+  });
+  const rows=colors.map(([id,c])=>({id,label:c.label,hex:c.hex}));
+  Object.keys(cnt).forEach(id=>{ if(!colors.some(([cid])=>cid===id)) rows.push({id,label:'（削除された色）',hex:'#cbd5e1'}); });
+  let h=`<div class="card"><div class="sec-hdr"><h3>🎟️ バザー券の枚数（日程別）</h3></div>`;
+  if(!rows.length||!days.length){ return h+'<div class="done-feed-empty">バザー券の利用はまだありません</div></div>'; }
+  const colTot=d=>rows.reduce((x,r)=>x+((cnt[r.id]||{})[d.id]||0),0);
+  const grand=days.reduce((x,d)=>x+colTot(d),0);
+  h+=`<div class="table-wrap"><table class="data-table dash-vtable"><thead><tr><th>色</th>${days.map(d=>`<th>${esc(d.label)}</th>`).join('')}<th>合計</th></tr></thead><tbody>`;
+  rows.forEach(r=>{
+    const rt=days.reduce((x,d)=>x+((cnt[r.id]||{})[d.id]||0),0);
+    if(rt===0) return;
+    h+=`<tr><td><span class="dash-vdot" style="background:${esc(r.hex)}"></span>${esc(r.label)}</td>${days.map(d=>`<td>${(cnt[r.id]||{})[d.id]||0}</td>`).join('')}<td><b>${rt}</b></td></tr>`;
+  });
+  h+=`<tr class="dash-vsum"><td>合計（枚）</td>${days.map(d=>`<td>${colTot(d)}</td>`).join('')}<td>${grand}</td></tr>`;
+  h+=`<tr class="dash-vsum"><td>金額</td>${days.map(d=>`<td>¥${(colTot(d)*VOUCHER_FACE_VALUE).toLocaleString()}</td>`).join('')}<td>¥${(grand*VOUCHER_FACE_VALUE).toLocaleString()}</td></tr>`;
+  h+=`</tbody></table></div></div>`;
+  return h;
+}
 function renderDashboard(){
   const box=document.getElementById('dash-content');
   if(!box) return;
@@ -39,6 +70,8 @@ function renderDashboard(){
   const sc=(v,l)=>`<div class="stat-card"><div class="stat-value">${v}</div><div class="stat-label">${l}</div></div>`;
   let h=sel+`<div class="dash-stats">${sc('¥'+total.toLocaleString(),(isLive?'本日の売上':'売上'))}${sc(orders.length,'注文数')}${sc('¥'+avg.toLocaleString(),'客単価')}</div>
   <div class="dash-stats">${sc(cnt('pending'),'調理待ち')}${sc(cnt('cooked'),'お渡し待ち')}${sc(cnt('completed'),'受渡済')}</div>`;
+
+  h+=dashVoucherCard();
 
   // 時間帯別
   const hours={};
