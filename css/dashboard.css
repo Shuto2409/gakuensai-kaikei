@@ -1,136 +1,28 @@
-// ===== ダッシュボード（誰でも見られる簡易集計）。PIN不要 =====
-function enterDash(){
-  S.currentRole='dash';
-  saveScreen('dash');
-  showScreen('dash');
-}
-// 表示する日の選択: 'cur'=営業中の日 / 日のid / 'all'=全期間
-function dashOptions(){
-  const days=Object.values(S.daysSnap||{}).sort((x,y)=>y.dayNumber-x.dayNumber);
-  const opts=[];
-  if(S.isDayOpen&&S.currentDay) opts.push(['cur',`Day ${S.currentDay.dayNumber}（本日）`]);
-  days.forEach(d=>{ if(!(S.isDayOpen&&S.currentDay&&String(d.id)===String(S.currentDay.id))) opts.push([String(d.id),`Day ${d.dayNumber}`]); });
-  opts.push(['all','全期間']);
-  return opts;
-}
-function setDashDay(v){ S.dashSel=v; renderDashboard(); }
-function dashOrders(){
-  const sel=S.dashSel||'cur';
-  const all=Object.values(S.ordersSnap||{}).filter(o=>o.status!=='cancelled');
-  if(sel==='all') return all;
-  if(sel==='cur'||(S.isDayOpen&&S.currentDay&&String(S.currentDay.id)===String(sel))){
-    return (S.isDayOpen&&S.currentDay)?all.filter(o=>String(o.dayId)===String(S.currentDay.id)):[];
-  }
-  return all.filter(o=>String(o.dayId)===String(sel));
-}
-// バザー券の枚数（日程別×色別）。換金のため、全日程を常に一覧で出す
-function dashVoucherCard(){
-  const colors=Object.entries(S.voucherColorsSnap||{}).sort((a,b)=>(a[1].order||0)-(b[1].order||0));
-  const days=Object.values(S.daysSnap||{}).map(d=>({id:String(d.id),label:`Day ${d.dayNumber}`,n:d.dayNumber}));
-  if(S.isDayOpen&&S.currentDay&&!days.some(d=>d.id===String(S.currentDay.id))) days.push({id:String(S.currentDay.id),label:`Day ${S.currentDay.dayNumber}（本日）`,n:S.currentDay.dayNumber});
-  days.sort((a,b)=>a.n-b.n);
-  const cnt={};   // cnt[colorId][dayId]
-  Object.values(S.ordersSnap||{}).forEach(o=>{
-    if(o.status==='cancelled') return;
-    Object.entries(o.vouchers||{}).forEach(([cid,n])=>{
-      const dk=String(o.dayId);
-      (cnt[cid]=cnt[cid]||{})[dk]=((cnt[cid]||{})[dk]||0)+(Number(n)||0);
-    });
-  });
-  const rows=colors.map(([id,c])=>({id,label:c.label,hex:c.hex}));
-  Object.keys(cnt).forEach(id=>{ if(!colors.some(([cid])=>cid===id)) rows.push({id,label:'（削除された色）',hex:'#cbd5e1'}); });
-  let h=`<div class="card"><div class="sec-hdr"><h3>🎟️ バザー券の枚数（日程別）</h3></div>`;
-  if(!rows.length||!days.length){ return h+'<div class="done-feed-empty">バザー券の利用はまだありません</div></div>'; }
-  const colTot=d=>rows.reduce((x,r)=>x+((cnt[r.id]||{})[d.id]||0),0);
-  const grand=days.reduce((x,d)=>x+colTot(d),0);
-  h+=`<div class="table-wrap"><table class="data-table dash-vtable"><thead><tr><th>色</th>${days.map(d=>`<th>${esc(d.label)}</th>`).join('')}<th>合計</th></tr></thead><tbody>`;
-  rows.forEach(r=>{
-    const rt=days.reduce((x,d)=>x+((cnt[r.id]||{})[d.id]||0),0);
-    if(rt===0) return;
-    h+=`<tr><td><span class="dash-vdot" style="background:${esc(r.hex)}"></span>${esc(r.label)}</td>${days.map(d=>`<td>${(cnt[r.id]||{})[d.id]||0}</td>`).join('')}<td><b>${rt}</b></td></tr>`;
-  });
-  h+=`<tr class="dash-vsum"><td>合計（枚）</td>${days.map(d=>`<td>${colTot(d)}</td>`).join('')}<td>${grand}</td></tr>`;
-  h+=`<tr class="dash-vsum"><td>金額</td>${days.map(d=>`<td>¥${(colTot(d)*VOUCHER_FACE_VALUE).toLocaleString()}</td>`).join('')}<td>¥${(grand*VOUCHER_FACE_VALUE).toLocaleString()}</td></tr>`;
-  h+=`</tbody></table></div></div>`;
-  return h;
-}
-function renderDashboard(){
-  const box=document.getElementById('dash-content');
-  if(!box) return;
-  const opts=dashOptions();
-  // 営業中でなければ、最新の営業日を自動で選ぶ
-  if(!S.dashSel||!opts.some(o=>o[0]===S.dashSel)) S.dashSel=opts[0][0]==='all'?'all':opts[0][0];
-  const isLive=S.dashSel==='cur';
-  const sel=`<div class="dash-days">${opts.map(([v,l])=>`<button class="dash-day-btn ${S.dashSel===v?'active':''}" onclick="setDashDay(this.dataset.v)" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</div>`;
-  const orders=dashOrders();
+/* ===== ダッシュボード ===== */
+#dash-screen{display:none;}
+#dash-screen.show{display:block;}
+.app-header.dash-header{background:linear-gradient(135deg,#1d4ed8,#2563eb);}
+.dash-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.dash-bar-label{flex:0 0 52px;font-size:12px;font-weight:700;color:#334155;}
+.dash-bar-label.wide{flex-basis:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dash-bar-track{flex:1;height:18px;background:#eef2f7;border-radius:9px;overflow:hidden;}
+.dash-bar-fill{height:100%;background:#2563eb;border-radius:9px;min-width:2px;}
+.dash-bar-fill.alt{background:#f59e0b;}
+.dash-bar-val{flex:0 0 112px;text-align:right;font-size:13px;font-weight:800;}
+.dash-bar-val small{font-size:11px;font-weight:600;color:var(--gray);}
+.dash-tops{margin-top:8px;font-size:12px;font-weight:700;color:#b45309;background:#fef3c7;padding:6px 10px;border-radius:8px;}
 
-  const total=orders.reduce((s,o)=>s+(o.total||0),0);
-  const cnt=k=>orders.filter(o=>(o.status||'pending')===k).length;
-  const avg=orders.length?Math.round(total/orders.length):0;
-  const sc=(v,l)=>`<div class="stat-card"><div class="stat-value">${v}</div><div class="stat-label">${l}</div></div>`;
-  let h=sel+`<div class="dash-stats">${sc('¥'+total.toLocaleString(),(isLive?'本日の売上':'売上'))}${sc(orders.length,'注文数')}${sc('¥'+avg.toLocaleString(),'客単価')}</div>
-  <div class="dash-stats">${sc(cnt('pending'),'調理待ち')}${sc(cnt('cooked'),'お渡し待ち')}${sc(cnt('completed'),'受渡済')}</div>`;
+.dash-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px;}
+.dash-stats .stat-card{padding:12px 6px;}
+.dash-stats .stat-value{font-size:22px;}
+@media(max-width:420px){.dash-stats .stat-value{font-size:18px;}}
 
-  h+=dashVoucherCard();
+.dash-days{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.dash-day-btn{padding:7px 14px;border-radius:999px;border:2px solid var(--border);background:white;font-size:13px;font-weight:800;color:#334155;cursor:pointer;}
+.dash-day-btn.active{background:#2563eb;border-color:#2563eb;color:white;}
+.dash-bar-fill.top{background:#16a34a;}
 
-  // 時間帯別
-  const hours={};
-  orders.forEach(o=>{
-    const t=new Date(o.timestamp); if(isNaN(t)) return;
-    const hr=t.getHours(); (hours[hr]=hours[hr]||{sales:0,n:0}); hours[hr].sales+=o.total||0; hours[hr].n++;
-  });
-  const hk=Object.keys(hours).map(Number).sort((a,b)=>a-b);
-  const maxS=Math.max(1,...hk.map(k=>hours[k].sales));
-  h+=`<div class="card"><div class="sec-hdr"><h3>🕐 時間帯別の売上</h3></div>`;
-  if(!hk.length) h+='<div class="done-feed-empty">まだ注文がありません</div>';
-  else{
-    const lo=hk[0],hi=hk[hk.length-1];
-    for(let k=lo;k<=hi;k++){
-      const d=hours[k]||{sales:0,n:0};
-      h+=`<div class="dash-bar-row"><div class="dash-bar-label">${k}時台</div><div class="dash-bar-track"><div class="dash-bar-fill" style="width:${Math.round(d.sales/maxS*100)}%"></div></div><div class="dash-bar-val">¥${d.sales.toLocaleString()}<small> ${d.n}件</small></div></div>`;
-    }
-  }
-  h+='</div>';
-
-  // 商品別（出数）
-  const map=buildItemMap(orders);
-  const tops={};
-  orders.forEach(o=>(o.items||[]).forEach(it=>(it.choices||[]).forEach(c=>{
-    if(c.none) return;
-    const m=S.menu[c.id]||S.menu[String(c.id)];
-    if(m&&isToppingItem(m)||c.extra>0||/トッピング/.test(c.label||'')) tops[c.name]=(tops[c.name]||0)+it.qty;
-  })));
-  const ent=Object.entries(map).sort((a,b)=>b[1].qty-a[1].qty);
-  const maxQ=Math.max(1,...ent.map(([,d])=>d.qty));
-  h+=`<div class="card"><div class="sec-hdr"><h3>🍟 商品別の出数</h3></div>`;
-  if(!ent.length) h+='<div class="done-feed-empty">まだ注文がありません</div>';
-  ent.forEach(([n,d])=>{
-    h+=`<div class="dash-bar-row"><div class="dash-bar-label wide">${esc(n)}</div><div class="dash-bar-track"><div class="dash-bar-fill alt" style="width:${Math.round(d.qty/maxQ*100)}%"></div></div><div class="dash-bar-val">${d.qty}個<small> ¥${d.revenue.toLocaleString()}</small></div></div>`;
-  });
-  h+='</div>';
-  const te=Object.entries(tops).sort((a,b)=>b[1]-a[1]);
-  const tTotal=te.reduce((x,[,q])=>x+q,0);
-  const withTop=orders.reduce((n,o)=>n+((o.items||[]).some(it=>(it.choices||[]).some(c=>!c.none&&(c.extra>0||/トッピング/.test(c.label||''))))?1:0),0);
-  h+=`<div class="card"><div class="sec-hdr"><h3>🧂 トッピングの配分</h3></div>`;
-  if(!te.length) h+='<div class="done-feed-empty">トッピングの注文はまだありません</div>';
-  else{
-    const mx=Math.max(1,...te.map(([,q])=>q));
-    te.forEach(([n,q])=>{
-      h+=`<div class="dash-bar-row"><div class="dash-bar-label wide">${esc(n)}</div><div class="dash-bar-track"><div class="dash-bar-fill top" style="width:${Math.round(q/mx*100)}%"></div></div><div class="dash-bar-val">${q}回<small> ${Math.round(q/tTotal*100)}%</small></div></div>`;
-    });
-    h+=`<div class="dash-tops">トッピング合計 ${tTotal}回 ／ トッピング付きの注文 ${withTop}件（全${orders.length}件中 ${orders.length?Math.round(withTop/orders.length*100):0}%）</div>`;
-  }
-  h+='</div>';
-
-  // 最近の注文（取消はPIN不要）
-  const recent=[...orders].sort((a,b)=>String(b.timestamp).localeCompare(String(a.timestamp))).slice(0,15);
-  h+=`<div class="card"><div class="sec-hdr"><h3>🧾 最近の注文</h3></div>`;
-  if(!recent.length) h+='<div class="done-feed-empty">まだ注文がありません</div>';
-  recent.forEach(o=>{
-    const time=new Date(o.timestamp).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
-    const st=o.status==='completed'?'✅受渡済':o.status==='cooked'?'🛎️お渡し待ち':'🍳調理待ち';
-    h+=`<div class="hist-row"><div class="hist-main"><div class="hist-top"><b>${o.ticketNum!=null?'整理券 '+o.ticketNum:'整理券なし'}</b> <span class="hist-sub">注文#${o.orderNum||'-'} ・ ${time} ・ ${st}</span></div><div class="hist-items">${esc(orderSummaryText(o))}</div><div class="hist-total">¥${(o.total||0).toLocaleString()}</div></div>${isLive?`<button class="btn btn-danger" style="padding:6px 12px;font-size:12px;flex-shrink:0;" onclick="cancelOrder('${o.id}')">取消</button>`:''}</div>`;
-  });
-  h+='</div>';
-  box.innerHTML=h;
-}
+.dash-vtable td,.dash-vtable th{text-align:center;white-space:nowrap;}
+.dash-vtable td:first-child,.dash-vtable th:first-child{text-align:left;}
+.dash-vdot{display:inline-block;width:13px;height:13px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:1px solid rgba(0,0,0,.2);}
+.dash-vsum td{font-weight:800;background:#f1f5f9;}
