@@ -129,7 +129,7 @@ async function confirmReset(){
   if(!confirm('⚠️ すべてのデータ（メニュー・在庫・設定・シフトも含めて）をリセットしますか？'))return;
   if(!confirm('本当に削除しますか？この操作は取り消せません。'))return;
   showLoading(true);
-  if(ROOT===REAL_ROOT){
+  if(ROOT!==DEBUG_ROOT){
     for(const k of ['menu','orders','days','currentDay','settings','tickets','voucherColors','shifts','members','gradeColors']) await db.ref(`${ROOT}/${k}`).remove();
   } else await db.ref(ROOT).remove();
   S.cart=[];
@@ -150,4 +150,3 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape') document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('show'));
   if(e.key==='Enter'&&document.getElementById('pin-modal-overlay').classList.contains('show')) pinConfirm();
 });
-
