@@ -1,0 +1,22 @@
+/* ===== イベント切り替え ===== */
+:root{--css-events:1;}
+#event-chip{margin-top:10px;display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#004d40;background:rgba(255,255,255,.7);border:1.5px solid #004d40;border-radius:999px;padding:5px 14px;cursor:pointer;}
+#event-chip:hover{background:rgba(255,255,255,.95);}
+.ev-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.ev-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;flex-wrap:wrap;}
+.ev-row.on{border-color:#16a34a;background:#f0fdf4;}
+.ev-info{flex:1;min-width:140px;}
+.ev-name{font-weight:800;font-size:15px;}
+.ev-sub{font-size:11px;color:var(--gray);margin-top:2px;}
+.ev-badge{font-size:10px;font-weight:800;color:#fff;background:#16a34a;border-radius:999px;padding:2px 8px;margin-left:4px;vertical-align:1px;}
+.ev-btns{display:flex;gap:6px;flex-wrap:wrap;}
+.ev-btns .btn{padding:6px 11px;font-size:12px;}
+.ev-new{border-top:2px dashed var(--border);padding-top:14px;}
+.ev-new h3{font-size:14px;margin-bottom:10px;}
+.ev-new input[type=text]{width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;margin-bottom:10px;}
+.ev-src{font-size:13px;font-weight:700;margin-bottom:8px;}
+.ev-src select{padding:6px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;}
+.ev-chks{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+.ev-chk{font-size:13px;display:flex;align-items:center;gap:8px;}
+.ev-chk input{width:16px;height:16px;}
+.ev-note{font-size:11px;color:var(--gray);margin-bottom:10px;line-height:1.5;}
