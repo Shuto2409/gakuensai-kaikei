@@ -6,7 +6,7 @@ function _saveLogin(v){try{if(v)localStorage.setItem(LOGIN_KEY,JSON.stringify(v)
 function _loadLogin(){try{return JSON.parse(localStorage.getItem(LOGIN_KEY)||'null');}catch(e){return null;}}
 function enterAccount(id,acc){
   S.account={id,name:acc.name,type:acc.type==='debug'?'debug':'real'};
-  ROOT=S.account.type==='debug'?DEBUG_ROOT:REAL_ROOT;
+  applyEventRoot(S.account.type==='debug');
   _saveLogin({id,pin:acc.pin});
   document.getElementById('debug-pill').style.display=S.account.type==='debug'?'block':'none';
   const box=document.getElementById('role-account');
@@ -62,7 +62,7 @@ async function copyRealToDebug(){
   try{
     const src={};
     ['menu','orders','days','currentDay','settings','tickets','voucherColors','shifts','members','gradeColors'].forEach(k=>{
-      const v=_getAtPath(_treeCache,[k]); if(v!=null) src[k]=v;
+      const v=_getAtPath(_treeCache,_pathToArray(eventRoot(S.eventId)).concat(k)); if(v!=null) src[k]=v;
     });
     await db.ref(DEBUG_ROOT).remove();
     if(Object.keys(src).length) await db.ref(DEBUG_ROOT).set(JSON.parse(JSON.stringify(src)));
