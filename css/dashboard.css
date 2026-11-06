@@ -27,3 +27,8 @@
 .dash-vtable td:first-child,.dash-vtable th:first-child{text-align:left;}
 .dash-vdot{display:inline-block;width:13px;height:13px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:1px solid rgba(0,0,0,.2);}
 .dash-vsum td{font-weight:800;background:#f1f5f9;}
+
+.dash-events{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+.dash-day-btn.ev{border-color:#16a34a;color:#166534;}
+.dash-day-btn.ev.active{background:#16a34a;border-color:#16a34a;color:#fff;}
+.dash-ro{background:#fef3c7;color:#92400e;font-size:12px;font-weight:800;padding:8px 12px;border-radius:10px;margin-bottom:10px;}
