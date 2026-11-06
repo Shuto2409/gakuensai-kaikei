@@ -7,6 +7,8 @@ function showAppVersion(){
 function startApp(){
   showAppVersion();
   setupListeners();
+  watchActiveEvent();
+  updateEventChip();
   showScreen('role');
   restoreScreen();
 }
@@ -27,12 +29,18 @@ const _EXPECT_FUNCS={
   'js/menu-admin.js':['saveMenuItem','getSetAvailability'],
   'js/orders-modals.js':['cancelOrder','showChoiceModal','showAdminPin'],
   'js/dashboard.js':['renderDashboard','enterDash'],
+  'js/events.js':['ensureEvents','applyEventRoot','showEventModal','addNewEvent'],
   'js/export-utils.js':['esc'],
   'js/shift.js':['renderShiftDisplay'],
   'js/accounts.js':['getAccounts']
 };
 function checkAppFiles(){
   const bad=[];
+  // CSSファイルの取り違え・上げ忘れ（各CSSが自分の目印を持っている）
+  ['admin','base','cashier','dashboard','events','kitchen','shift','ticket-compact'].forEach(n=>{
+    const v=getComputedStyle(document.documentElement).getPropertyValue('--css-'+n).trim();
+    if(v!=='1') bad.push('css/'+n+'.css');
+  });
   Object.entries(_EXPECT_FUNCS).forEach(([f,fns])=>{
     const miss=fns.filter(n=>{try{return typeof (0,eval)(n)!=='function';}catch(e){return true;}});
     if(miss.length) bad.push(f);
@@ -63,7 +71,8 @@ function checkAppFiles(){
 (async function boot(){
   if(!checkAppFiles()) return;
   await _initTree();
-  if(Object.keys(getAccounts()).length===0){ startApp(); return; }   // アカウント未作成＝従来どおりログイン不要
+  await ensureEvents();
+  if(Object.keys(getAccounts()).length===0){ applyEventRoot(false); startApp(); return; }   // アカウント未作成＝従来どおりログイン不要
   const saved=_loadLogin();
   if(saved){
     const a=getAccounts()[saved.id];
