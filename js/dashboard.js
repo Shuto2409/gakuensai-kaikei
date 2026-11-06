@@ -1,36 +1,48 @@
 // ===== ダッシュボード（誰でも見られる簡易集計）。PIN不要 =====
-function enterDash(){
+function enterDash(keepEvent){
+  if(keepEvent!==true) S.dashEvent=null;
   S.currentRole='dash';
   saveScreen('dash');
   showScreen('dash');
 }
+// 表示するイベントのデータ。今のイベントは画面の最新データ、過去イベントは読み取り専用で参照する
+let _D=null;
+function dashSrc(){
+  const ev=S.dashEvent||S.eventId;
+  const dbg=S.account&&S.account.type==='debug';
+  if(dbg||!ev||ev===S.eventId) return {live:true,id:S.eventId,orders:S.ordersSnap,days:S.daysSnap,colors:S.voucherColorsSnap,menu:S.menu,isOpen:S.isDayOpen,cur:S.currentDay};
+  const base=_pathToArray(eventRoot(ev));
+  const g=k=>_getAtPath(_treeCache,base.concat(k))||{};
+  return {live:false,id:ev,orders:g('orders'),days:g('days'),colors:g('voucherColors'),menu:g('menu'),isOpen:false,cur:null};
+}
+function setDashEvent(id){ S.dashEvent=id; S.dashSel=null; renderDashboard(); }
 // 表示する日の選択: 'cur'=営業中の日 / 日のid / 'all'=全期間
 function dashOptions(){
-  const days=Object.values(S.daysSnap||{}).sort((x,y)=>y.dayNumber-x.dayNumber);
+  const days=Object.values(_D.days||{}).sort((x,y)=>y.dayNumber-x.dayNumber);
   const opts=[];
-  if(S.isDayOpen&&S.currentDay) opts.push(['cur',`Day ${S.currentDay.dayNumber}（本日）`]);
-  days.forEach(d=>{ if(!(S.isDayOpen&&S.currentDay&&String(d.id)===String(S.currentDay.id))) opts.push([String(d.id),`Day ${d.dayNumber}`]); });
+  if(_D.isOpen&&_D.cur) opts.push(['cur',`Day ${_D.cur.dayNumber}（本日）`]);
+  days.forEach(d=>{ if(!(_D.isOpen&&_D.cur&&String(d.id)===String(_D.cur.id))) opts.push([String(d.id),`Day ${d.dayNumber}`]); });
   opts.push(['all','全期間']);
   return opts;
 }
 function setDashDay(v){ S.dashSel=v; renderDashboard(); }
 function dashOrders(){
   const sel=S.dashSel||'cur';
-  const all=Object.values(S.ordersSnap||{}).filter(o=>o.status!=='cancelled');
+  const all=Object.values(_D.orders||{}).filter(o=>o.status!=='cancelled');
   if(sel==='all') return all;
-  if(sel==='cur'||(S.isDayOpen&&S.currentDay&&String(S.currentDay.id)===String(sel))){
-    return (S.isDayOpen&&S.currentDay)?all.filter(o=>String(o.dayId)===String(S.currentDay.id)):[];
+  if(sel==='cur'||(_D.isOpen&&_D.cur&&String(_D.cur.id)===String(sel))){
+    return (_D.isOpen&&_D.cur)?all.filter(o=>String(o.dayId)===String(_D.cur.id)):[];
   }
   return all.filter(o=>String(o.dayId)===String(sel));
 }
 // バザー券の枚数（日程別×色別）。換金のため、全日程を常に一覧で出す
 function dashVoucherCard(){
-  const colors=Object.entries(S.voucherColorsSnap||{}).sort((a,b)=>(a[1].order||0)-(b[1].order||0));
-  const days=Object.values(S.daysSnap||{}).map(d=>({id:String(d.id),label:`Day ${d.dayNumber}`,n:d.dayNumber}));
-  if(S.isDayOpen&&S.currentDay&&!days.some(d=>d.id===String(S.currentDay.id))) days.push({id:String(S.currentDay.id),label:`Day ${S.currentDay.dayNumber}（本日）`,n:S.currentDay.dayNumber});
+  const colors=Object.entries(_D.colors||{}).sort((a,b)=>(a[1].order||0)-(b[1].order||0));
+  const days=Object.values(_D.days||{}).map(d=>({id:String(d.id),label:`Day ${d.dayNumber}`,n:d.dayNumber}));
+  if(_D.isOpen&&_D.cur&&!days.some(d=>d.id===String(_D.cur.id))) days.push({id:String(_D.cur.id),label:`Day ${_D.cur.dayNumber}（本日）`,n:_D.cur.dayNumber});
   days.sort((a,b)=>a.n-b.n);
   const cnt={};   // cnt[colorId][dayId]
-  Object.values(S.ordersSnap||{}).forEach(o=>{
+  Object.values(_D.orders||{}).forEach(o=>{
     if(o.status==='cancelled') return;
     Object.entries(o.vouchers||{}).forEach(([cid,n])=>{
       const dk=String(o.dayId);
@@ -57,10 +69,11 @@ function dashVoucherCard(){
 function renderDashboard(){
   const box=document.getElementById('dash-content');
   if(!box) return;
+  _D=dashSrc();
   const opts=dashOptions();
   // 営業中でなければ、最新の営業日を自動で選ぶ
   if(!S.dashSel||!opts.some(o=>o[0]===S.dashSel)) S.dashSel=opts[0][0]==='all'?'all':opts[0][0];
-  const isLive=S.dashSel==='cur';
+  const isLive=S.dashSel==='cur'&&_D.live;
   const sel=`<div class="dash-days">${opts.map(([v,l])=>`<button class="dash-day-btn ${S.dashSel===v?'active':''}" onclick="setDashDay(this.dataset.v)" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</div>`;
   const orders=dashOrders();
 
@@ -68,7 +81,11 @@ function renderDashboard(){
   const cnt=k=>orders.filter(o=>(o.status||'pending')===k).length;
   const avg=orders.length?Math.round(total/orders.length):0;
   const sc=(v,l)=>`<div class="stat-card"><div class="stat-value">${v}</div><div class="stat-label">${l}</div></div>`;
-  let h=sel+`<div class="dash-stats">${sc('¥'+total.toLocaleString(),(isLive?'本日の売上':'売上'))}${sc(orders.length,'注文数')}${sc('¥'+avg.toLocaleString(),'客単価')}</div>
+  const evs=_evSorted();
+  const evSel=(evs.length>1&&!(S.account&&S.account.type==='debug'))
+    ?`<div class="dash-events">📅 ${evs.map(e=>`<button class="dash-day-btn ev ${_D.id===e.id?'active':''}" onclick="setDashEvent(this.dataset.v)" data-v="${esc(e.id)}">${esc(e.name)}${e.id===S.eventId?'（使用中）':''}</button>`).join('')}</div>`:'';
+  const roNote=_D.live?'':`<div class="dash-ro">📖 過去のイベントを表示中です（閲覧のみ）。${esc(eventName(_D.id))}</div>`;
+  let h=evSel+roNote+sel+`<div class="dash-stats">${sc('¥'+total.toLocaleString(),(isLive?'本日の売上':'売上'))}${sc(orders.length,'注文数')}${sc('¥'+avg.toLocaleString(),'客単価')}</div>
   <div class="dash-stats">${sc(cnt('pending'),'調理待ち')}${sc(cnt('cooked'),'お渡し待ち')}${sc(cnt('completed'),'受渡済')}</div>`;
 
   h+=dashVoucherCard();
@@ -97,7 +114,7 @@ function renderDashboard(){
   const tops={};
   orders.forEach(o=>(o.items||[]).forEach(it=>(it.choices||[]).forEach(c=>{
     if(c.none) return;
-    const m=S.menu[c.id]||S.menu[String(c.id)];
+    const m=_D.menu[c.id]||_D.menu[String(c.id)];
     if(m&&isToppingItem(m)||c.extra>0||/トッピング/.test(c.label||'')) tops[c.name]=(tops[c.name]||0)+it.qty;
   })));
   const ent=Object.entries(map).sort((a,b)=>b[1].qty-a[1].qty);
