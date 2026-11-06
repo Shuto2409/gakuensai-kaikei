@@ -14,13 +14,14 @@
 // ▼ 配布用ファイルではここに設定が自動で入ります ▼
 window.PRESET_CONFIG = null;
 </script>
-<link rel="stylesheet" href="css/base.css?v=1.7.0">
-<link rel="stylesheet" href="css/cashier.css?v=1.7.0">
-<link rel="stylesheet" href="css/kitchen.css?v=1.7.0">
-<link rel="stylesheet" href="css/admin.css?v=1.7.0">
-<link rel="stylesheet" href="css/shift.css?v=1.7.0">
-<link rel="stylesheet" href="css/dashboard.css?v=1.7.0">
-<link rel="stylesheet" href="css/ticket-compact.css?v=1.7.0">
+<link rel="stylesheet" href="css/base.css?v=1.8.0">
+<link rel="stylesheet" href="css/cashier.css?v=1.8.0">
+<link rel="stylesheet" href="css/kitchen.css?v=1.8.0">
+<link rel="stylesheet" href="css/admin.css?v=1.8.0">
+<link rel="stylesheet" href="css/shift.css?v=1.8.0">
+<link rel="stylesheet" href="css/dashboard.css?v=1.8.0">
+<link rel="stylesheet" href="css/events.css?v=1.8.0">
+<link rel="stylesheet" href="css/ticket-compact.css?v=1.8.0">
 </head>
 <body>
 
@@ -207,6 +208,7 @@ window.PRESET_CONFIG = null;
       </div>
     </div>
     <div id="role-shift-display"></div>
+    <div id="event-chip" onclick="showEventModal()" title="イベントの切り替え・新規作成">📅 <span id="event-chip-name">…</span> ▾</div>
     <div id="role-account"><span id="role-account-name"></span><button onclick="doLogout()">ログアウト</button></div>
   </div>
   <div class="role-cards">
@@ -507,6 +509,15 @@ window.PRESET_CONFIG = null;
 </div>
 
 <!-- ===== PIN MODAL ===== -->
+<div class="modal-overlay" id="event-modal-overlay">
+  <div class="modal" style="max-width:600px;max-height:90vh;overflow:auto;">
+    <h2>📅 イベント</h2>
+    <p style="font-size:12px;color:var(--gray);margin:-6px 0 12px;">イベントごとに、メニュー・注文・営業日・売上などを別々に記録します。使うイベントは全端末で共通です。</p>
+    <div id="event-modal-body"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" style="width:100%;justify-content:center;" onclick="closeEventModal()">閉じる</button></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="history-modal-overlay">
   <div class="modal" style="max-width:560px;">
     <h2>🧾 本日の注文履歴</h2>
@@ -632,20 +643,21 @@ window.PRESET_CONFIG = null;
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="js/config.js?v=1.7.0"></script>
-<script src="js/db.js?v=1.7.0"></script>
-<script src="js/state.js?v=1.7.0"></script>
-<script src="js/roles.js?v=1.7.0"></script>
-<script src="js/menu.js?v=1.7.0"></script>
-<script src="js/cart-payment.js?v=1.7.0"></script>
-<script src="js/kitchen-handoff.js?v=1.7.0"></script>
-<script src="js/admin-core.js?v=1.7.0"></script>
-<script src="js/menu-admin.js?v=1.7.0"></script>
-<script src="js/orders-modals.js?v=1.7.0"></script>
-<script src="js/dashboard.js?v=1.7.0"></script>
-<script src="js/export-utils.js?v=1.7.0"></script>
-<script src="js/shift.js?v=1.7.0"></script>
-<script src="js/accounts.js?v=1.7.0"></script>
-<script src="js/boot.js?v=1.7.0"></script>
+<script src="js/config.js?v=1.8.0"></script>
+<script src="js/db.js?v=1.8.0"></script>
+<script src="js/state.js?v=1.8.0"></script>
+<script src="js/roles.js?v=1.8.0"></script>
+<script src="js/menu.js?v=1.8.0"></script>
+<script src="js/cart-payment.js?v=1.8.0"></script>
+<script src="js/kitchen-handoff.js?v=1.8.0"></script>
+<script src="js/admin-core.js?v=1.8.0"></script>
+<script src="js/menu-admin.js?v=1.8.0"></script>
+<script src="js/orders-modals.js?v=1.8.0"></script>
+<script src="js/dashboard.js?v=1.8.0"></script>
+<script src="js/events.js?v=1.8.0"></script>
+<script src="js/export-utils.js?v=1.8.0"></script>
+<script src="js/shift.js?v=1.8.0"></script>
+<script src="js/accounts.js?v=1.8.0"></script>
+<script src="js/boot.js?v=1.8.0"></script>
 </body>
 </html>
