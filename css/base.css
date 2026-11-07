@@ -1,4 +1,5 @@
 /* ===== 共通・ホーム・ヘッダー ===== */
+:root{--css-base:1;}
 *{box-sizing:border-box;margin:0;padding:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 /* タブレットで入力欄を押したときの自動ズームを防ぐ（16px未満だとiOSが拡大する） */
 @media(pointer:coarse){input,select,textarea{font-size:16px !important;}}
