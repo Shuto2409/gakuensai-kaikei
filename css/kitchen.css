@@ -1,4 +1,5 @@
 /* ===== 調理・受け渡し・POSレジ風メニュー ===== */
+:root{--css-kitchen:1;}
 /* ===================== KITCHEN SCREEN ===================== */
 /* ===================== KITCHEN SCREEN ===================== */
 #kitchen-screen{display:none;}
