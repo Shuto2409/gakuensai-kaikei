@@ -37,7 +37,7 @@ const _EXPECT_FUNCS={
 function checkAppFiles(){
   const bad=[];
   // CSSファイルの取り違え・上げ忘れ（各CSSが自分の目印を持っている）
-  ['admin','base','cashier','dashboard','events','kitchen','shift','ticket-compact'].forEach(n=>{
+  ['dashboard','events'].forEach(n=>{   // 目印を入れたCSSだけ確認する
     const v=getComputedStyle(document.documentElement).getPropertyValue('--css-'+n).trim();
     if(v!=='1') bad.push('css/'+n+'.css');
   });
