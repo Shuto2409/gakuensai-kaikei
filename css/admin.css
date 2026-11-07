@@ -1,4 +1,5 @@
 /* ===== 管理・POS管理・モーダル・フォーム ===== */
+:root{--css-admin:1;}
 /* ===================== ADMIN SCREEN ===================== */
 #admin-screen{display:none;}
 #admin-screen.show{display:block;}
