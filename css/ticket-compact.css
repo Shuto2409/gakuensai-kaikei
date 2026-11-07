@@ -1,4 +1,5 @@
 /* ===== 調理/受け渡しカード（コンパクト表示） ===== */
+:root{--css-ticket-compact:1;}
 /* カード内の文字を小さめにして枠からはみ出さないようにする */
 .order-ticket.compact .ticket-big-no{font-size:26px;}
 .order-ticket.compact .ticket-big-no small{font-size:10px;}
